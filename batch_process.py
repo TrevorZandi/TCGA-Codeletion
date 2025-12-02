@@ -93,10 +93,17 @@ def process_study(study_id, output_dir, chromosome="13"):
         )
         
         # Save conditional matrix (always needed for Dash app)
-        conditional.to_excel(
-            os.path.join(study_output_dir, f"chr{chromosome}_codeletion_conditional_frequencies.xlsx"),
-            index=True
-        )
+        # Use CSV for large chromosomes (Excel has size limits)
+        if n_genes > 1000:
+            conditional.to_csv(
+                os.path.join(study_output_dir, f"chr{chromosome}_codeletion_conditional_frequencies.csv"),
+                index=True
+            )
+        else:
+            conditional.to_excel(
+                os.path.join(study_output_dir, f"chr{chromosome}_codeletion_conditional_frequencies.xlsx"),
+                index=True
+            )
         
         # Handle large chromosomes (Excel size limits)
         n_genes = freq_matrix.shape[0]

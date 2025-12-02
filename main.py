@@ -129,8 +129,14 @@ def main():
     print("=" * 60)
     
     conditional = codeletion_calc.compute_conditional_codeletion(counts_df)
-    conditional.to_excel(os.path.join(output_dir, f"chr{chromosome}_codeletion_conditional_frequencies.xlsx"), index=True)
-    print(f"Saved: chr{chromosome}_codeletion_conditional_frequencies.xlsx")
+    
+    # For large chromosomes, save as CSV instead of Excel (faster and no size limits)
+    if n_genes > 1000:
+        conditional.to_csv(os.path.join(output_dir, f"chr{chromosome}_codeletion_conditional_frequencies.csv"), index=True)
+        print(f"Saved: chr{chromosome}_codeletion_conditional_frequencies.csv (CSV format for large chromosome)")
+    else:
+        conditional.to_excel(os.path.join(output_dir, f"chr{chromosome}_codeletion_conditional_frequencies.xlsx"), index=True)
+        print(f"Saved: chr{chromosome}_codeletion_conditional_frequencies.xlsx")
     
     print("\nConditional frequencies (first 5 genes):")
     print(conditional.iloc[:5, :5])

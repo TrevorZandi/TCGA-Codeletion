@@ -40,14 +40,21 @@ def load_conditional_matrix(chromosome="13", study_id="prad_tcga_pan_can_atlas_2
         DataFrame with conditional probabilities P(i|j)
     """
     processed_dir = get_processed_dir(study_id)
-    filename = f"chr{chromosome}_codeletion_conditional_frequencies.xlsx"
-    filepath = os.path.join(processed_dir, filename)
     
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Conditional matrix not found: {filepath}")
+    # Try CSV first (used for large chromosomes), then Excel
+    csv_filepath = os.path.join(processed_dir, f"chr{chromosome}_codeletion_conditional_frequencies.csv")
+    xlsx_filepath = os.path.join(processed_dir, f"chr{chromosome}_codeletion_conditional_frequencies.xlsx")
     
-    df = pd.read_excel(filepath, index_col=0)
-    return df
+    if os.path.exists(csv_filepath):
+        df = pd.read_csv(csv_filepath, index_col=0)
+        return df
+    elif os.path.exists(xlsx_filepath):
+        df = pd.read_excel(xlsx_filepath, index_col=0)
+        return df
+    else:
+        raise FileNotFoundError(
+            f"Conditional matrix not found: {xlsx_filepath} or {csv_filepath}"
+        )
 
 
 def load_frequency_matrix(chromosome="13", study_id="prad_tcga_pan_can_atlas_2018"):
