@@ -86,6 +86,9 @@ def process_study(study_id, output_dir, chromosome="13"):
         study_output_dir = os.path.join(output_dir, study_id)
         os.makedirs(study_output_dir, exist_ok=True)
         
+        # Determine chromosome size for format selection
+        n_genes = freq_matrix.shape[0]
+        
         # Save gene metadata
         chr_genes.to_excel(
             os.path.join(study_output_dir, f"chr{chromosome}_genes_metadata.xlsx"),
@@ -106,7 +109,6 @@ def process_study(study_id, output_dir, chromosome="13"):
             )
         
         # Handle large chromosomes (Excel size limits)
-        n_genes = freq_matrix.shape[0]
         if n_genes > 1000:
             # For large chromosomes, only save top pairs and skip full matrices
             print(f"  Large chromosome ({n_genes} genes) - saving top pairs only")
