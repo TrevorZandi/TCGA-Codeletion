@@ -25,30 +25,7 @@ Cbioportal/
 
 ## Workflow
 
-### 1. ETL Pipeline: `main.py` (Single Study)
-
-**Purpose:** Fetch, process, and analyze data for PRAD study only
-
-**Steps:**
-1. Query cBioPortal API for CNA data
-2. Build deletion matrix (samples × genes)
-3. Compute co-deletion statistics
-4. Export results to `data/processed/`
-
-**Generated Files:**
-- `chr13_genes_metadata.xlsx` - Gene info with cytobands
-- `chr13_codeletion_conditional_frequencies.xlsx` - P(i|j) matrix
-- `chr13_codeletion_frequencies.xlsx` - Long-format pairs
-- `chr13_codeletion_matrix.xlsx` - Symmetric frequency matrix
-- `chr13_codeletion_counts.xlsx` - Raw counts
-- `chr13_conditional_codeletion_heatmap.html` - Standalone visualization
-
-**Run:**
-```bash
-python main.py
-```
-
-### 1b. Batch Processing: `batch_process.py` (All TCGA Studies)
+### 1. Batch Processing: `batch_process.py` (All TCGA Studies) - **RECOMMENDED**
 
 **Purpose:** Pre-compute chr13 co-deletions for all 32 TCGA PanCancer Atlas studies
 
@@ -76,12 +53,37 @@ data/processed/
 
 **Run:**
 ```bash
-python batch_process.py
-# Or use convenience script:
 ./run_batch.sh
+# Or directly:
+python batch_process.py
 ```
 
 **Expected Time:** ~30-60 minutes depending on API caching
+
+### 1b. Single Study Pipeline: `main.py` (Optional)
+
+**Purpose:** Fetch, process, and analyze data for PRAD study only
+
+**Steps:**
+1. Query cBioPortal API for CNA data
+2. Build deletion matrix (samples × genes)
+3. Compute co-deletion statistics
+4. Export results to `data/processed/`
+
+**Generated Files:**
+- `chr13_genes_metadata.xlsx` - Gene info with cytobands
+- `chr13_codeletion_conditional_frequencies.xlsx` - P(i|j) matrix
+- `chr13_codeletion_frequencies.xlsx` - Long-format pairs
+- `chr13_codeletion_matrix.xlsx` - Symmetric frequency matrix
+- `chr13_codeletion_counts.xlsx` - Raw counts
+- `chr13_conditional_codeletion_heatmap.html` - Standalone visualization
+
+**Run:**
+```bash
+python main.py
+```
+
+**Note:** This is now optional - use `batch_process.py` to process all studies at once
 
 ### 2. Visualization: `app.py`
 
@@ -106,7 +108,6 @@ python app.py
 Then open: http://127.0.0.1:8050
 
 **Note:** Run `batch_process.py` first to generate data for multiple studies
-
 ## Key Components
 
 ### Data Layer (`data/`)
@@ -175,35 +176,49 @@ Then open: http://127.0.0.1:8050
 - Bootstrap components for professional UI
 - Callbacks for interactivity
 
-## Usage Example
+## Quick Start
 
-### Using .venv Python (Recommended)
+### 1. Install Dependencies
 
 ```bash
-# Step 1: Activate virtual environment
-source .venv/bin/activate
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Step 2: Run ETL pipeline
-python main.py
-
-# Step 3: Start Dash app
-python app.py
-
-# Step 4: Open browser
-# Navigate to http://127.0.0.1:8050
+# Install required packages
+pip install -r requirements.txt
 ```
 
-### Using Convenience Scripts
+### 2. Process All TCGA Studies
 
 ```bash
-# Step 1: Run ETL pipeline
-./run_main.sh
+# Run batch processing for all 32 studies (~30-60 minutes)
+./run_batch.sh
+```
 
-# Step 2: Start Dash app
+This will generate data for all TCGA PanCancer Atlas studies and save results to `data/processed/{study_id}/`.
+
+### 3. Launch Interactive Application
+
+```bash
+# Start Dash web application
 ./run_app.sh
 
-# Step 3: Open browser
-# Navigate to http://127.0.0.1:8050
+# Open browser and navigate to:
+# http://127.0.0.1:8050
+```
+
+### Alternative: Manual Commands
+
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Process all studies
+python batch_process.py
+
+# Start Dash app
+python app.py
 ```
 
 ## Future Enhancements
