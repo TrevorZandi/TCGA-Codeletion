@@ -92,26 +92,39 @@ def process_study(study_id, output_dir, chromosome="13"):
             index=False
         )
         
-        # Save matrices
+        # Save conditional matrix (always needed for Dash app)
         conditional.to_excel(
             os.path.join(study_output_dir, f"chr{chromosome}_codeletion_conditional_frequencies.xlsx"),
             index=True
         )
         
-        freq_matrix.to_excel(
-            os.path.join(study_output_dir, f"chr{chromosome}_codeletion_matrix.xlsx"),
-            index=True
-        )
-        
-        counts_df.to_excel(
-            os.path.join(study_output_dir, f"chr{chromosome}_codeletion_counts.xlsx"),
-            index=True
-        )
-        
-        freq_long.to_excel(
-            os.path.join(study_output_dir, f"chr{chromosome}_codeletion_frequencies.xlsx"),
-            index=False
-        )
+        # Handle large chromosomes (Excel size limits)
+        n_genes = freq_matrix.shape[0]
+        if n_genes > 1000:
+            # For large chromosomes, only save top pairs and skip full matrices
+            print(f"  Large chromosome ({n_genes} genes) - saving top pairs only")
+            max_pairs = min(100000, len(freq_long))
+            top_pairs = freq_long.sort_values("co_deletion_frequency", ascending=False).head(max_pairs)
+            top_pairs.to_excel(
+                os.path.join(study_output_dir, f"chr{chromosome}_codeletion_frequencies.xlsx"),
+                index=False
+            )
+        else:
+            # Small/medium chromosomes - save all data
+            freq_matrix.to_excel(
+                os.path.join(study_output_dir, f"chr{chromosome}_codeletion_matrix.xlsx"),
+                index=True
+            )
+            
+            counts_df.to_excel(
+                os.path.join(study_output_dir, f"chr{chromosome}_codeletion_counts.xlsx"),
+                index=True
+            )
+            
+            freq_long.to_excel(
+                os.path.join(study_output_dir, f"chr{chromosome}_codeletion_frequencies.xlsx"),
+                index=False
+            )
         
         deletion_freqs.to_excel(
             os.path.join(study_output_dir, f"chr{chromosome}_deletion_frequencies.xlsx"),

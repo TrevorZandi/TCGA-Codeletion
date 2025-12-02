@@ -102,15 +102,26 @@ def main():
     print("Exporting results...")
     print("=" * 60)
     
+    # Only save top pairs to avoid Excel size limits (max 1,048,576 rows)
     all_pairs = freq_long.sort_values("co_deletion_frequency", ascending=False)
-    all_pairs.to_excel(os.path.join(output_dir, f"chr{chromosome}_codeletion_frequencies.xlsx"), index=False)
-    print(f"Saved: chr{chromosome}_codeletion_frequencies.xlsx")
+    max_pairs_to_save = min(100000, len(all_pairs))  # Save top 100k pairs or less
+    top_pairs_to_save = all_pairs.head(max_pairs_to_save)
+    top_pairs_to_save.to_excel(os.path.join(output_dir, f"chr{chromosome}_codeletion_frequencies.xlsx"), index=False)
+    print(f"Saved: chr{chromosome}_codeletion_frequencies.xlsx (top {max_pairs_to_save:,} pairs)")
+    if len(all_pairs) > max_pairs_to_save:
+        print(f"  Note: Showing top {max_pairs_to_save:,} of {len(all_pairs):,} total pairs (Excel size limit)")
     
-    freq_matrix.to_excel(os.path.join(output_dir, f"chr{chromosome}_codeletion_matrix.xlsx"), index=True)
-    print(f"Saved: chr{chromosome}_codeletion_matrix.xlsx")
-    
-    counts_df.to_excel(os.path.join(output_dir, f"chr{chromosome}_codeletion_counts.xlsx"), index=True)
-    print(f"Saved: chr{chromosome}_codeletion_counts.xlsx")
+    # For large chromosomes, skip full matrix exports (too large for Excel)
+    n_genes = freq_matrix.shape[0]
+    if n_genes > 1000:
+        print(f"  Skipping full matrix exports (chr{chromosome} has {n_genes:,} genes - too large for Excel)")
+        print(f"  Note: Conditional matrix and deletion frequencies will still be saved")
+    else:
+        freq_matrix.to_excel(os.path.join(output_dir, f"chr{chromosome}_codeletion_matrix.xlsx"), index=True)
+        print(f"Saved: chr{chromosome}_codeletion_matrix.xlsx")
+        
+        counts_df.to_excel(os.path.join(output_dir, f"chr{chromosome}_codeletion_counts.xlsx"), index=True)
+        print(f"Saved: chr{chromosome}_codeletion_counts.xlsx")
     
     # Step 8: Compute conditional probabilities
     print("\n" + "=" * 60)
