@@ -146,10 +146,15 @@ def main():
     # Set up paths
     script_dir = os.path.dirname(__file__)
     
+    # Define all chromosomes to process
+    chromosomes = [str(i) for i in range(1, 23)] + ['X', 'Y']
+    
     # Allow command-line argument for test file
     if len(sys.argv) > 1 and sys.argv[1] == '--test':
         study_list_path = os.path.join(script_dir, "data", "curated_data", "test_studies.csv")
         print("** TEST MODE: Using test_studies.csv **\n")
+        # In test mode, only process chr13 for speed
+        chromosomes = ['13']
     else:
         study_list_path = os.path.join(script_dir, "data", "curated_data", "TCGA_study_names.csv")
     
@@ -172,15 +177,25 @@ def main():
     for i, study_id in enumerate(study_ids, 1):
         print(f"  {i:2d}. {study_id}")
     
-    # Process each study
+    print(f"\nChromosomes to process: {', '.join(chromosomes)}")
+    print(f"Total analyses: {len(study_ids)} studies × {len(chromosomes)} chromosomes = {len(study_ids) * len(chromosomes)}")
+    
+    # Process each study and chromosome combination
     results_list = []
+    total_analyses = len(study_ids) * len(chromosomes)
+    analysis_count = 0
+    
     for i, study_id in enumerate(study_ids, 1):
-        print(f"\n\n{'#'*70}")
-        print(f"# Study {i}/{len(study_ids)}")
-        print(f"{'#'*70}")
-        
-        result = process_study(study_id, output_dir, chromosome="13")
-        results_list.append(result)
+        for chr_idx, chromosome in enumerate(chromosomes, 1):
+            analysis_count += 1
+            print(f"\n\n{'#'*70}")
+            print(f"# Analysis {analysis_count}/{total_analyses}: {study_id} - chr{chromosome}")
+            print(f"# Study {i}/{len(study_ids)} | Chromosome {chr_idx}/{len(chromosomes)}")
+            print(f"{'#'*70}")
+            
+            result = process_study(study_id, output_dir, chromosome=chromosome)
+            result['chromosome'] = chromosome
+            results_list.append(result)
     
     # Summary
     print("\n\n" + "="*70)
@@ -190,19 +205,21 @@ def main():
     successful = [r for r in results_list if r['success']]
     failed = [r for r in results_list if not r['success']]
     
-    print(f"\nTotal studies processed: {len(study_ids)}")
+    print(f"\nTotal analyses: {len(results_list)}")
+    print(f"  Studies: {len(study_ids)}")
+    print(f"  Chromosomes per study: {len(chromosomes)}")
     print(f"Successful: {len(successful)}")
     print(f"Failed: {len(failed)}")
     
     if successful:
-        print("\n✓ Successfully processed studies:")
+        print("\n✓ Successfully processed analyses:")
         for r in successful:
-            print(f"  - {r['study_id']:45s} | {r['n_samples']:4d} samples | {r['n_genes']:4d} genes | {r['n_deletions']:6d} deletions")
+            print(f"  - {r['study_id']:45s} chr{r['chromosome']:>2s} | {r['n_samples']:4d} samples | {r['n_genes']:4d} genes | {r['n_deletions']:6d} deletions")
     
     if failed:
-        print("\n✗ Failed studies:")
+        print("\n✗ Failed analyses:")
         for r in failed:
-            print(f"  - {r['study_id']:45s} | Error: {r['error']}")
+            print(f"  - {r['study_id']:45s} chr{r['chromosome']:>2s} | Error: {r['error']}")
     
     # Save summary report
     summary_df = pd.DataFrame(results_list)

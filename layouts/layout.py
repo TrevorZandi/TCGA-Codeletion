@@ -21,12 +21,12 @@ def create_layout():
         dbc.Row([
             dbc.Col([
                 html.H1(
-                    "Chromosome 13 Co-Deletion Analysis",
+                    "TCGA Co-Deletion Analysis",
                     className="text-center mb-4 mt-4"
                 ),
                 html.P(
                     "Interactive visualization of conditional co-deletion probabilities "
-                    "for genes on chromosome 13 in prostate adenocarcinoma (PRAD).",
+                    "across chromosomes and TCGA PanCancer Atlas studies.",
                     className="text-center text-muted mb-4"
                 )
             ])
@@ -44,6 +44,20 @@ def create_layout():
                             id='study-dropdown',
                             options=[],  # Will be populated by callback
                             value=None,  # Will be set by callback
+                            clearable=False,
+                            className="mb-3"
+                        ),
+                        
+                        # Chromosome selector
+                        html.Label("Chromosome:", className="fw-bold"),
+                        dcc.Dropdown(
+                            id='chromosome-dropdown',
+                            options=[
+                                *[{'label': f'Chromosome {i}', 'value': str(i)} for i in range(1, 23)],
+                                {'label': 'Chromosome X', 'value': 'X'},
+                                {'label': 'Chromosome Y', 'value': 'Y'}
+                            ],
+                            value='13',  # Default to chr13
                             clearable=False,
                             className="mb-3"
                         ),
@@ -182,15 +196,20 @@ def create_layout():
         dbc.Row([
             dbc.Col([
                 html.Hr(),
-                html.P(
-                    [
-                        "Data source: ",
-                        html.A("cBioPortal for Cancer Genomics", 
-                               href="https://www.cbioportal.org/", 
-                               target="_blank"),
-                        " | Study: PRAD TCGA PanCancer Atlas 2018"
-                    ],
-                    className="text-center text-muted small"
+                html.Div(
+                    id='footer-info',
+                    children=[
+                        html.P(
+                            [
+                                "Data source: ",
+                                html.A("cBioPortal for Cancer Genomics", 
+                                       href="https://www.cbioportal.org/", 
+                                       target="_blank"),
+                                " | TCGA PanCancer Atlas 2018"
+                            ],
+                            className="text-center text-muted small"
+                        )
+                    ]
                 )
             ])
         ])
@@ -200,7 +219,7 @@ def create_layout():
     return layout
 
 
-def create_stats_display(n_genes, n_samples, n_deletions):
+def create_stats_display(n_genes, n_samples, n_deletions, chromosome="13"):
     """
     Create statistics display component.
     
@@ -208,6 +227,7 @@ def create_stats_display(n_genes, n_samples, n_deletions):
         n_genes: Number of genes analyzed
         n_samples: Number of samples
         n_deletions: Total number of deletion events
+        chromosome: Chromosome identifier (default: "13")
         
     Returns:
         HTML component with statistics
@@ -217,7 +237,7 @@ def create_stats_display(n_genes, n_samples, n_deletions):
             dbc.Col([
                 html.Div([
                     html.H4(str(n_genes), className="text-primary mb-0"),
-                    html.P("Genes on Chr13", className="text-muted small mb-0")
+                    html.P(f"Genes on Chr{chromosome}", className="text-muted small mb-0")
                 ], className="text-center")
             ], width=4),
             dbc.Col([

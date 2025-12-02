@@ -27,26 +27,34 @@ Cbioportal/
 
 ### 1. Batch Processing: `batch_process.py` (All TCGA Studies) - **RECOMMENDED**
 
-**Purpose:** Pre-compute chr13 co-deletions for all 32 TCGA PanCancer Atlas studies
+**Purpose:** Pre-compute co-deletions for **all chromosomes (1-22, X, Y)** across all 32 TCGA PanCancer Atlas studies
 
 **Input:** `data/curated_data/TCGA_study_names.csv` (list of study IDs)
 
 **Process:**
 - Reads study list from CSV
-- Processes each study independently
+- Processes each study for all 24 chromosomes (1-22, X, Y)
 - Saves results to `data/processed/{study_id}/`
 - Generates summary report
+- Total analyses: 32 studies × 24 chromosomes = 768 analyses
 
 **Generated Structure:**
 ```
 data/processed/
 ├── prad_tcga_pan_can_atlas_2018/
+│   ├── chr1_genes_metadata.xlsx
+│   ├── chr1_codeletion_conditional_frequencies.xlsx
+│   ├── chr1_codeletion_frequencies.xlsx
+│   ├── chr2_genes_metadata.xlsx
+│   ├── chr2_codeletion_conditional_frequencies.xlsx
+│   ├── ...
 │   ├── chr13_genes_metadata.xlsx
 │   ├── chr13_codeletion_conditional_frequencies.xlsx
-│   ├── chr13_codeletion_frequencies.xlsx
-│   └── ...
+│   ├── ...
+│   ├── chrX_genes_metadata.xlsx
+│   └── chrY_genes_metadata.xlsx
 ├── brca_tcga_pan_can_atlas_2018/
-│   └── ...
+│   └── (same structure)
 ├── ...
 └── processing_summary.xlsx
 ```
@@ -56,13 +64,18 @@ data/processed/
 ./run_batch.sh
 # Or directly:
 python batch_process.py
+
+# Test mode (chr13 only, 2 studies):
+python batch_process.py --test
 ```
 
-**Expected Time:** ~30-60 minutes depending on API caching
+**Expected Time:** 
+- Full run (all chromosomes, all studies): ~8-12 hours
+- Test mode (chr13 only, 2 studies): ~5-10 minutes
 
 ### 1b. Single Study Pipeline: `main.py` (Optional)
 
-**Purpose:** Fetch, process, and analyze data for PRAD study only
+**Purpose:** Fetch, process, and analyze data for a single study and chromosome
 
 **Steps:**
 1. Query cBioPortal API for CNA data
@@ -70,36 +83,43 @@ python batch_process.py
 3. Compute co-deletion statistics
 4. Export results to `data/processed/`
 
-**Generated Files:**
-- `chr13_genes_metadata.xlsx` - Gene info with cytobands
-- `chr13_codeletion_conditional_frequencies.xlsx` - P(i|j) matrix
-- `chr13_codeletion_frequencies.xlsx` - Long-format pairs
-- `chr13_codeletion_matrix.xlsx` - Symmetric frequency matrix
-- `chr13_codeletion_counts.xlsx` - Raw counts
-- `chr13_conditional_codeletion_heatmap.html` - Standalone visualization
-
-**Run:**
+**Usage:**
 ```bash
-python main.py
+python main.py [chromosome] [study_id]
+
+# Examples:
+python main.py                    # Default: chr13, PRAD
+python main.py 17                 # Chr17, PRAD
+python main.py 13 brca_tcga_pan_can_atlas_2018  # Chr13, BRCA
+python main.py X prad_tcga_pan_can_atlas_2018   # ChrX, PRAD
 ```
 
-**Note:** This is now optional - use `batch_process.py` to process all studies at once
+**Generated Files (per chromosome):**
+- `chr{N}_genes_metadata.xlsx` - Gene info with cytobands
+- `chr{N}_codeletion_conditional_frequencies.xlsx` - P(i|j) matrix
+- `chr{N}_codeletion_frequencies.xlsx` - Long-format pairs
+- `chr{N}_codeletion_matrix.xlsx` - Symmetric frequency matrix
+- `chr{N}_codeletion_counts.xlsx` - Raw counts
+- `chr{N}_conditional_codeletion_heatmap.html` - Standalone visualization
+
+**Note:** This is now optional - use `batch_process.py` to process all studies and chromosomes at once
 
 ### 2. Visualization: `app.py`
 
 **Purpose:** Interactive Dash web application
 
 **Features:**
-- **Study selector** - Choose from all processed TCGA studies
+- **Study selector** - Choose from all processed TCGA studies (32 studies)
+- **Chromosome selector** - Choose from chromosomes 1-22, X, or Y
 - **Individual gene deletion frequency scatter plot** - Shows how often each gene is deleted (hover for gene name)
 - Interactive heatmap with zoom/pan
 - Configurable colorscale (Viridis, YlOrRd, Blues, etc.)
 - Adjustable axis labels (5-50 labels)
 - Top co-deleted gene pairs bar plot
-- Dataset statistics display
+- Dataset statistics display (dynamically updates per chromosome)
 - Export high-resolution images
 
-**Data Source:** Loads pre-processed files from `data/processed/{study_id}/`
+**Data Source:** Loads pre-processed files from `data/processed/{study_id}/chr{N}_*.xlsx`
 
 **Run:**
 ```bash
@@ -189,14 +209,19 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Process All TCGA Studies
+### 2. Process All TCGA Studies and Chromosomes
 
 ```bash
-# Run batch processing for all 32 studies (~30-60 minutes)
+# Run batch processing for all 32 studies × 24 chromosomes (~8-12 hours)
 ./run_batch.sh
+
+# OR: Test mode (chr13 only, 2 studies, ~5-10 minutes)
+python batch_process.py --test
 ```
 
-This will generate data for all TCGA PanCancer Atlas studies and save results to `data/processed/{study_id}/`.
+This will generate data for all TCGA PanCancer Atlas studies across all chromosomes (1-22, X, Y) and save results to `data/processed/{study_id}/chr{N}_*.xlsx`.
+
+**Note:** The full run processes 768 analyses (32 studies × 24 chromosomes). You may want to start with test mode or process a single chromosome first.
 
 ### 3. Launch Interactive Application
 
@@ -221,11 +246,19 @@ python batch_process.py
 python app.py
 ```
 
+## Features
+
+✅ **Multi-chromosome support** - Analyze all chromosomes (1-22, X, Y)  
+✅ **Multi-study comparison** - 32 TCGA PanCancer Atlas studies  
+✅ **Interactive visualizations** - Dash-powered heatmaps and scatter plots  
+✅ **Batch processing** - Automated analysis pipeline  
+✅ **Cytoband-ordered displays** - Genes sorted by chromosomal position  
+
 ## Future Enhancements
 
-- Multi-chromosome support (dropdowns for chr1-22, X, Y)
-- Multi-study comparison (PRAD, BRCA, etc.)
-- Gene search/filter functionality
-- Download filtered datasets
-- Custom threshold selection
+- Gene search/filter functionality in Dash app
+- Download filtered datasets from UI
+- Custom deletion threshold selection
 - Network visualization of co-deletion clusters
+- Multi-study comparison overlays
+- Statistical significance testing for co-deletions

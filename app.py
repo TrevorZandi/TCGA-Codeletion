@@ -68,10 +68,11 @@ def populate_study_dropdown(_):
     [
         Input('colorscale-dropdown', 'value'),
         Input('n-labels-slider', 'value'),
-        Input('study-dropdown', 'value')
+        Input('study-dropdown', 'value'),
+        Input('chromosome-dropdown', 'value')
     ]
 )
-def update_heatmap(colorscale, n_labels, study_id):
+def update_heatmap(colorscale, n_labels, study_id, chromosome):
     """
     Update the heatmap visualization based on user selections.
     
@@ -95,16 +96,16 @@ def update_heatmap(colorscale, n_labels, study_id):
         )
         return fig
     
-    # Load processed data for selected study
+    # Load processed data for selected study and chromosome
     conditional_matrix = processed_loader.load_conditional_matrix(
-        chromosome="13", 
+        chromosome=chromosome, 
         study_id=study_id
     )
     
     # Load gene metadata for cytoband labels
     try:
         gene_metadata = processed_loader.load_gene_metadata(
-            chromosome="13",
+            chromosome=chromosome,
             study_id=study_id
         )
         cytobands = gene_metadata["cytoband"].tolist()
@@ -118,7 +119,7 @@ def update_heatmap(colorscale, n_labels, study_id):
     # Create figure
     fig = codeletion_heatmap.create_heatmap_figure(
         mat=conditional_matrix,
-        title=f"Chr13 Conditional Co-Deletion Matrix - {study_name}",
+        title=f"Chr{chromosome} Conditional Co-Deletion Matrix - {study_name}",
         colorscale=colorscale,
         cytobands=cytobands,
         n_labels=n_labels
@@ -132,10 +133,11 @@ def update_heatmap(colorscale, n_labels, study_id):
     Output('top-pairs-barplot', 'figure'),
     [
         Input('n-pairs-slider', 'value'),
-        Input('study-dropdown', 'value')
+        Input('study-dropdown', 'value'),
+        Input('chromosome-dropdown', 'value')
     ]
 )
-def update_top_pairs(n_pairs, study_id):
+def update_top_pairs(n_pairs, study_id, chromosome):
     """
     Update the top pairs bar plot based on selected number of pairs.
     
@@ -157,9 +159,9 @@ def update_top_pairs(n_pairs, study_id):
         )
         return fig
     
-    # Load co-deletion pairs data for selected study
+    # Load co-deletion pairs data for selected study and chromosome
     pairs_data = processed_loader.load_codeletion_pairs(
-        chromosome="13",
+        chromosome=chromosome,
         study_id=study_id
     )
     
@@ -175,9 +177,12 @@ def update_top_pairs(n_pairs, study_id):
 # Callback: Update deletion frequency scatter plot
 @app.callback(
     Output('deletion-frequency-scatter', 'figure'),
-    Input('study-dropdown', 'value')
+    [
+        Input('study-dropdown', 'value'),
+        Input('chromosome-dropdown', 'value')
+    ]
 )
-def update_deletion_scatter(study_id):
+def update_deletion_scatter(study_id, chromosome):
     """
     Update the deletion frequency scatter plot for the selected study.
     
@@ -200,14 +205,14 @@ def update_deletion_scatter(study_id):
     
     # Load deletion frequencies
     deletion_freqs = processed_loader.load_deletion_frequencies(
-        chromosome="13",
+        chromosome=chromosome,
         study_id=study_id
     )
     
     # Load gene metadata for cytoband ordering
     try:
         gene_metadata = processed_loader.load_gene_metadata(
-            chromosome="13",
+            chromosome=chromosome,
             study_id=study_id
         )
     except FileNotFoundError:
@@ -225,9 +230,12 @@ def update_deletion_scatter(study_id):
 # Callback: Update dataset statistics
 @app.callback(
     Output('stats-display', 'children'),
-    Input('study-dropdown', 'value')
+    [
+        Input('study-dropdown', 'value'),
+        Input('chromosome-dropdown', 'value')
+    ]
 )
-def update_stats(study_id):
+def update_stats(study_id, chromosome):
     """
     Update the statistics display with dataset information.
     
@@ -243,9 +251,9 @@ def update_stats(study_id):
             html.P("No processed data available.", className="text-muted")
         ])
     
-    # Load data to get stats for selected study
+    # Load data to get stats for selected study and chromosome
     conditional_matrix = processed_loader.load_conditional_matrix(
-        chromosome="13",
+        chromosome=chromosome,
         study_id=study_id
     )
     
@@ -255,19 +263,20 @@ def update_stats(study_id):
     # Try to get more detailed stats from pairs data
     try:
         pairs_data = processed_loader.load_codeletion_pairs(
-            chromosome="13",
+            chromosome=chromosome,
             study_id=study_id
         )
         max_codeletions = int(pairs_data['co_deletion_frequency'].max()) if len(pairs_data) > 0 else 0
     except:
         max_codeletions = 0
     
-    # Create stats display
+    # Create stats display with chromosome information
     # Note: n_samples would need to be extracted from the data
     stats_html = create_stats_display(
         n_genes=n_genes,
         n_samples=conditional_matrix.shape[0],  # Approximation
-        n_deletions=max_codeletions
+        n_deletions=max_codeletions,
+        chromosome=chromosome
     )
     
     return stats_html
