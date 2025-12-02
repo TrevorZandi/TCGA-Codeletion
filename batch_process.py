@@ -15,7 +15,6 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from data import queries, cbioportal_client
 from analysis import codeletion_calc
-from visualization import codeletion_heatmap
 
 
 def process_study(study_id, output_dir, chromosome="13"):
@@ -138,16 +137,6 @@ def process_study(study_id, output_dir, chromosome="13"):
         deletion_freqs.to_excel(
             os.path.join(study_output_dir, f"chr{chromosome}_deletion_frequencies.xlsx"),
             index=True
-        )
-        
-        # Generate standalone heatmap
-        cytobands = chr_genes["cytoband"].tolist()
-        codeletion_heatmap.plot_heatmap(
-            conditional,
-            title=f"Chr{chromosome} Conditional Co-Deletion: {study_id}",
-            output_path=os.path.join(study_output_dir, f"chr{chromosome}_conditional_codeletion_heatmap.html"),
-            cytobands=cytobands,
-            n_labels=20
         )
         
         results['success'] = True

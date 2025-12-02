@@ -24,7 +24,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from data import queries
 from analysis import codeletion_calc
-from visualization import codeletion_heatmap
 
 
 def main():
@@ -145,23 +144,6 @@ def main():
     deletion_freqs = codeletion_calc.compute_deletion_frequencies(deletion_mat)
     deletion_freqs.to_excel(os.path.join(output_dir, f"chr{chromosome}_deletion_frequencies.xlsx"), index=True)
     print(f"Saved: chr{chromosome}_deletion_frequencies.xlsx")
-    
-    # Step 9: Generate visualizations
-    print("\n" + "=" * 60)
-    print("Generating visualizations...")
-    print("=" * 60)
-    
-    # Extract cytobands from chr_genes (already sorted by chromosomal position)
-    cytobands = chr_genes["cytoband"].tolist()
-    
-    codeletion_heatmap.plot_heatmap(
-        conditional, 
-        title=f"Chr{chromosome} Conditional Co-Deletion Matrix",
-        output_path=os.path.join(output_dir, f"chr{chromosome}_conditional_codeletion_heatmap.html"),
-        cytobands=cytobands,
-        n_labels=20
-    )
-    print(f"Saved: chr{chromosome}_conditional_codeletion_heatmap.html")
     
     print("\n" + "=" * 60)
     print("Analysis complete!")
