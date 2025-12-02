@@ -135,7 +135,11 @@ def fetch_discrete_copy_number(molecular_profile_id, sample_list_id, entrez_ids,
     Returns:
         List of discrete copy number data dicts
     """
-    cache_file = f"cna_data_{molecular_profile_id}_{sample_list_id}.pkl"
+    # Create a cache key that includes a hash of the gene IDs to ensure uniqueness per gene set
+    import hashlib
+    gene_ids_str = ",".join(map(str, sorted(entrez_ids)))
+    gene_hash = hashlib.md5(gene_ids_str.encode()).hexdigest()[:8]
+    cache_file = f"cna_data_{molecular_profile_id}_{sample_list_id}_{gene_hash}.pkl"
     
     if not refresh:
         cached = load_from_cache(cache_file)
@@ -147,7 +151,6 @@ def fetch_discrete_copy_number(molecular_profile_id, sample_list_id, entrez_ids,
         "sampleListId": sample_list_id,
         "entrezGeneIds": list(map(int, entrez_ids))
     }
-    r = requests.post(url, json=body, headers=HEADERS)
     r = requests.post(url, json=body, headers=HEADERS)
     r.raise_for_status()
     cna_data = r.json()
