@@ -219,13 +219,13 @@ def create_layout():
     return layout
 
 
-def create_stats_display(n_genes, n_samples, max_deletion_pct, chromosome="13"):
+def create_stats_display(n_genes, n_genes_with_deletions, max_deletion_pct, chromosome="13"):
     """
     Create statistics display component.
     
     Args:
-        n_genes: Number of genes analyzed
-        n_samples: Number of genes in the analysis (matrix dimension)
+        n_genes: Number of genes on the chromosome
+        n_genes_with_deletions: Number of genes deleted at least once
         max_deletion_pct: Maximum individual gene deletion frequency (as percentage)
         chromosome: Chromosome identifier (default: "13")
         
@@ -242,8 +242,8 @@ def create_stats_display(n_genes, n_samples, max_deletion_pct, chromosome="13"):
             ], width=4),
             dbc.Col([
                 html.Div([
-                    html.H4(str(n_samples), className="text-primary mb-0"),
-                    html.P("Genes Analyzed", className="text-muted small mb-0")
+                    html.H4(str(n_genes_with_deletions), className="text-primary mb-0"),
+                    html.P("Genes with Deletions", className="text-muted small mb-0")
                 ], className="text-center")
             ], width=4),
             dbc.Col([

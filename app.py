@@ -260,20 +260,22 @@ def update_stats(study_id, chromosome):
     # Calculate basic stats
     n_genes = conditional_matrix.shape[0]
     
-    # Get deletion frequencies to calculate max
+    # Get deletion frequencies to calculate max and count genes with deletions
     try:
         del_freqs = processed_loader.load_deletion_frequencies(
             chromosome=chromosome,
             study_id=study_id
         )
         max_deletion_pct = int(del_freqs.max() * 100) if len(del_freqs) > 0 else 0
+        n_genes_with_deletions = (del_freqs > 0).sum()  # Count genes deleted at least once
     except:
         max_deletion_pct = 0
+        n_genes_with_deletions = 0
     
     # Create stats display with chromosome information
     stats_html = create_stats_display(
         n_genes=n_genes,
-        n_samples=conditional_matrix.shape[0],  # Number of genes (symmetric matrix)
+        n_genes_with_deletions=n_genes_with_deletions,
         max_deletion_pct=max_deletion_pct,
         chromosome=chromosome
     )
