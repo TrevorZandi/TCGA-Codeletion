@@ -260,22 +260,21 @@ def update_stats(study_id, chromosome):
     # Calculate basic stats
     n_genes = conditional_matrix.shape[0]
     
-    # Try to get more detailed stats from pairs data
+    # Get deletion frequencies to calculate max
     try:
-        pairs_data = processed_loader.load_codeletion_pairs(
+        del_freqs = processed_loader.load_deletion_frequencies(
             chromosome=chromosome,
             study_id=study_id
         )
-        max_codeletions = int(pairs_data['co_deletion_frequency'].max()) if len(pairs_data) > 0 else 0
+        max_deletion_pct = int(del_freqs.max() * 100) if len(del_freqs) > 0 else 0
     except:
-        max_codeletions = 0
+        max_deletion_pct = 0
     
     # Create stats display with chromosome information
-    # Note: n_samples would need to be extracted from the data
     stats_html = create_stats_display(
         n_genes=n_genes,
-        n_samples=conditional_matrix.shape[0],  # Approximation
-        n_deletions=max_codeletions,
+        n_samples=conditional_matrix.shape[0],  # Number of genes (symmetric matrix)
+        max_deletion_pct=max_deletion_pct,
         chromosome=chromosome
     )
     
