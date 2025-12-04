@@ -1,7 +1,7 @@
 """
 Dash application for interactive co-deletion analysis visualization.
 
-This app loads pre-processed co-deletion data and provides interactive
+This multi-page app loads pre-processed co-deletion data and provides interactive
 controls for exploring conditional co-deletion probabilities.
 """
 
@@ -11,24 +11,70 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(__file__))
 
-from dash import Dash, Input, Output, State, html
+from dash import Dash, Input, Output, State, html, dcc
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
-from layouts import create_layout, create_stats_display
+from layouts import create_home_layout, create_codeletion_layout, create_summary_layout, create_stats_display
 from data import processed_loader
 from visualization import codeletion_heatmap
 
 
-# Initialize Dash app
+# Initialize Dash app with multi-page support
 app = Dash(
     __name__,
     external_stylesheets=[dbc.themes.BOOTSTRAP],
-    title="Chromosome Co-Deletion Analysis"
+    title="TCGA Co-Deletion Analysis",
+    suppress_callback_exceptions=True  # Allow callbacks for components not yet in layout
 )
 
-# Set the layout
-app.layout = create_layout()
+# Set the app layout with URL routing
+app.layout = html.Div([
+    dcc.Location(id='url', refresh=False),
+    html.Div(id='page-content')
+])
+
+
+# Callback: Display appropriate page based on URL
+@app.callback(
+    Output('page-content', 'children'),
+    Input('url', 'pathname')
+)
+def display_page(pathname):
+    """
+    Route to the appropriate page based on URL pathname.
+    
+    Args:
+        pathname: Current URL path
+        
+    Returns:
+        Layout component for the requested page
+    """
+    if pathname == '/codeletion':
+        return create_codeletion_layout()
+    elif pathname == '/summary':
+        return create_summary_layout()
+    elif pathname == '/' or pathname == '/home':
+        return create_home_layout()
+    else:
+        # 404 page
+        return dbc.Container([
+            dbc.Row([
+                dbc.Col([
+                    html.H1("404: Page Not Found", className="text-center mt-5 mb-4"),
+                    html.P(
+                        "The page you're looking for doesn't exist.",
+                        className="text-center text-muted mb-4"
+                    ),
+                    html.Div([
+                        dcc.Link(
+                            dbc.Button("Go Home", color="primary", size="lg"),
+                            href="/"
+                        )
+                    ], className="text-center")
+                ])
+            ])
+        ], style={'maxWidth': '800px'})
 
 
 # Callback: Populate study dropdown with available studies and set default
@@ -281,6 +327,135 @@ def update_stats(study_id, chromosome):
     )
     
     return stats_html
+
+
+# ============================================================================
+# Summary Page Callbacks
+# ============================================================================
+
+# Callback: Populate summary page study dropdown
+@app.callback(
+    Output('summary-study-dropdown', 'options'),
+    Input('summary-study-dropdown', 'id')
+)
+def populate_summary_study_dropdown(_):
+    """Populate the summary study dropdown."""
+    available_studies = processed_loader.list_available_studies()
+    
+    if not available_studies:
+        return [{'label': 'No studies processed yet', 'value': 'none'}]
+    
+    options = [{'label': 'All Studies', 'value': 'all'}]
+    for study_id in available_studies:
+        label = study_id.replace('_tcga_pan_can_atlas_2018', '').replace('_', ' ').upper()
+        options.append({'label': label, 'value': study_id})
+    
+    return options
+
+
+# Callback: Update summary statistics
+@app.callback(
+    [Output('summary-total-studies', 'children'),
+     Output('summary-total-chromosomes', 'children'),
+     Output('summary-total-analyses', 'children')],
+    [Input('summary-study-dropdown', 'value'),
+     Input('summary-chromosome-dropdown', 'value')]
+)
+def update_summary_stats(study_id, chromosome):
+    """Update the summary statistics cards."""
+    available_studies = processed_loader.list_available_studies()
+    
+    if not available_studies:
+        return "0", "0", "0"
+    
+    n_studies = len(available_studies) if study_id == 'all' or study_id is None else 1
+    n_chromosomes = 24 if chromosome == 'all' else 1
+    n_analyses = n_studies * n_chromosomes
+    
+    return str(n_studies), str(n_chromosomes), str(n_analyses)
+
+
+# Callback: Update summary distribution chart
+@app.callback(
+    Output('summary-distribution-chart', 'figure'),
+    [Input('summary-study-dropdown', 'value'),
+     Input('summary-chromosome-dropdown', 'value')]
+)
+def update_summary_distribution(study_id, chromosome):
+    """Update the deletion frequency distribution chart."""
+    fig = go.Figure()
+    fig.add_annotation(
+        text="Summary statistics visualization coming soon...",
+        xref="paper", yref="paper",
+        x=0.5, y=0.5, showarrow=False,
+        font=dict(size=16)
+    )
+    fig.update_layout(
+        height=400,
+        xaxis_title="Deletion Frequency",
+        yaxis_title="Count"
+    )
+    return fig
+
+
+# Callback: Update chromosome comparison chart
+@app.callback(
+    Output('summary-chromosome-comparison', 'figure'),
+    [Input('summary-study-dropdown', 'value'),
+     Input('summary-chromosome-dropdown', 'value')]
+)
+def update_chromosome_comparison(study_id, chromosome):
+    """Update the chromosome comparison chart."""
+    fig = go.Figure()
+    fig.add_annotation(
+        text="Chromosome comparison coming soon...",
+        xref="paper", yref="paper",
+        x=0.5, y=0.5, showarrow=False,
+        font=dict(size=16)
+    )
+    fig.update_layout(
+        height=400,
+        xaxis_title="Chromosome",
+        yaxis_title="Avg Deletion Frequency"
+    )
+    return fig
+
+
+# Callback: Update study comparison chart
+@app.callback(
+    Output('summary-study-comparison', 'figure'),
+    [Input('summary-study-dropdown', 'value'),
+     Input('summary-chromosome-dropdown', 'value')]
+)
+def update_study_comparison(study_id, chromosome):
+    """Update the study comparison chart."""
+    fig = go.Figure()
+    fig.add_annotation(
+        text="Study comparison coming soon...",
+        xref="paper", yref="paper",
+        x=0.5, y=0.5, showarrow=False,
+        font=dict(size=16)
+    )
+    fig.update_layout(
+        height=400,
+        xaxis_title="Study",
+        yaxis_title="Avg Deletion Frequency"
+    )
+    return fig
+
+
+# Callback: Update summary table
+@app.callback(
+    Output('summary-table', 'children'),
+    [Input('summary-study-dropdown', 'value'),
+     Input('summary-chromosome-dropdown', 'value')]
+)
+def update_summary_table(study_id, chromosome):
+    """Update the summary statistics table."""
+    return html.P(
+        "Detailed statistics table coming soon...",
+        className="text-muted text-center"
+    )
 
 
 # Run the app

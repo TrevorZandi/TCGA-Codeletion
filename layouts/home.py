@@ -1,0 +1,119 @@
+"""
+Homepage layout for the TCGA Co-Deletion Analysis app.
+"""
+
+from dash import html, dcc
+import dash_bootstrap_components as dbc
+
+
+def create_home_layout():
+    """
+    Create the homepage layout.
+    
+    Returns:
+        Dash layout component for the homepage
+    """
+    return dbc.Container([
+        # Hero section
+        dbc.Row([
+            dbc.Col([
+                html.H1(
+                    "TCGA Co-Deletion Analysis",
+                    className="text-center mt-5 mb-4",
+                    style={'fontSize': '3rem', 'fontWeight': 'bold'}
+                ),
+                html.P(
+                    "Explore chromosomal co-deletion patterns across TCGA PanCancer Atlas studies",
+                    className="text-center text-muted mb-5",
+                    style={'fontSize': '1.25rem'}
+                )
+            ])
+        ]),
+        
+        # Description card
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H4("About This Tool", className="mb-3"),
+                        html.P(
+                            "This application provides interactive visualization of chromosomal "
+                            "co-deletion patterns in cancer. Co-deletions occur when two or more genes "
+                            "are deleted together in tumor samples, potentially indicating genomic "
+                            "instability or shared regulatory mechanisms."
+                        ),
+                        html.P(
+                            "The analysis covers all 24 human chromosomes (1-22, X, Y) across "
+                            "32 TCGA PanCancer Atlas studies, providing comprehensive insights into "
+                            "co-deletion patterns across different cancer types."
+                        ),
+                        html.Hr(),
+                        html.H5("Features:", className="mb-3"),
+                        html.Ul([
+                            html.Li("Interactive conditional co-deletion heatmaps"),
+                            html.Li("Individual gene deletion frequency analysis"),
+                            html.Li("Top co-deleted gene pair identification"),
+                            html.Li("Multi-chromosome and multi-study comparisons"),
+                            html.Li("Summary statistics across all analyses")
+                        ])
+                    ])
+                ], className="mb-5")
+            ], width=10, lg=8)
+        ], justify="center"),
+        
+        # Navigation cards
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H4("🔬 Co-Deletion Explorer", className="mb-3"),
+                        html.P(
+                            "Explore conditional co-deletion probabilities with interactive "
+                            "heatmaps. Analyze specific chromosomes and studies with customizable "
+                            "visualizations."
+                        ),
+                        dcc.Link(
+                            dbc.Button("Launch Explorer", color="primary", size="lg", className="w-100"),
+                            href="/codeletion"
+                        )
+                    ])
+                ], className="h-100")
+            ], width=12, md=6, lg=5, className="mb-4"),
+            
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H4("📊 Summary Statistics", className="mb-3"),
+                        html.P(
+                            "View comprehensive statistics across all processed studies and chromosomes. "
+                            "Compare deletion patterns and identify trends across cancer types."
+                        ),
+                        dcc.Link(
+                            dbc.Button("View Statistics", color="success", size="lg", className="w-100"),
+                            href="/summary"
+                        )
+                    ])
+                ], className="h-100")
+            ], width=12, md=6, lg=5, className="mb-4")
+        ], justify="center"),
+        
+        # Data source info
+        dbc.Row([
+            dbc.Col([
+                html.Hr(),
+                html.Div([
+                    html.P(
+                        [
+                            "Data source: ",
+                            html.A("cBioPortal for Cancer Genomics", 
+                                   href="https://www.cbioportal.org/", 
+                                   target="_blank"),
+                            " | TCGA PanCancer Atlas 2018"
+                        ],
+                        className="text-center text-muted small"
+                    )
+                ], className="mb-4")
+            ])
+        ])
+        
+    ], fluid=True, style={'maxWidth': '1200px'})
