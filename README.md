@@ -1,4 +1,6 @@
-# Co-Deletion Analysis Application
+# TCGA Co-Deletion Analysis Application
+
+Multi-page Dash application for analyzing gene co-deletion patterns across TCGA PanCancer Atlas studies.
 
 ## Architecture Overview
 
@@ -6,21 +8,24 @@ This project follows a clean separation between ETL pipeline and visualization:
 
 ```
 Cbioportal/
-├── main.py                          # ETL pipeline (run first)
-├── app.py                           # Dash application (run second)
+├── main.py                          # ETL pipeline (single study/chromosome)
+├── batch_process.py                 # ETL pipeline (all studies/chromosomes)
+├── app.py                           # Multi-page Dash application
 ├── data/
 │   ├── cbioportal_client.py        # Low-level API wrapper
 │   ├── queries.py                   # Domain-specific queries
 │   ├── cache_utils.py               # Caching utilities
 │   ├── processed_loader.py          # Load pre-processed data for Dash
 │   ├── cached/                      # API response cache
-│   └── processed/                   # Analysis outputs (Excel, HTML)
+│   └── processed/                   # Analysis outputs (Excel/CSV)
 ├── analysis/
 │   └── codeletion_calc.py           # Statistical calculations
 ├── visualization/
 │   └── codeletion_heatmap.py        # Plotly figure constructors
 └── layouts/
-    └── layout.py                    # Dash layout components
+    ├── home.py                      # Homepage layout
+    ├── codeletion.py                # Co-deletion explorer page
+    └── summary.py                   # Summary statistics page
 ```
 
 ## Workflow
@@ -104,11 +109,16 @@ python main.py X prad_tcga_pan_can_atlas_2018   # ChrX, PRAD
 
 **Note:** This is now optional - use `batch_process.py` to process all studies and chromosomes at once
 
-### 2. Visualization: `app.py`
+### 2. Visualization: `app.py` - Multi-Page Dash Application
 
-**Purpose:** Interactive Dash web application
+**Purpose:** Interactive web application with multiple pages for data exploration and analysis
 
-**Features:**
+**Application Structure:**
+- **Homepage** (`/`) - Landing page with navigation
+- **Co-Deletion Explorer** (`/codeletion`) - Interactive analysis page
+- **Summary Statistics** (`/summary`) - Overview across studies and chromosomes
+
+**Co-Deletion Explorer Features:**
 - **Study selector** - Choose from all processed TCGA studies (32 studies)
 - **Chromosome selector** - Choose from chromosomes 1-22, X, or Y
 - **Individual gene deletion frequency scatter plot** - Shows how often each gene is deleted (hover for gene name)
@@ -119,7 +129,13 @@ python main.py X prad_tcga_pan_can_atlas_2018   # ChrX, PRAD
 - Dataset statistics display (dynamically updates per chromosome)
 - Export high-resolution images
 
-**Data Source:** Loads pre-processed files from `data/processed/{study_id}/chr{N}_*.xlsx`
+**Summary Statistics Features:**
+- Filter by study and chromosome
+- Distribution charts across analyses
+- Comparative visualizations
+- Detailed statistics tables
+
+**Data Source:** Loads pre-processed files from `data/processed/{study_id}/chr{N}_*.xlsx` or `.csv`
 
 **Run:**
 ```bash
@@ -164,18 +180,43 @@ Then open: http://127.0.0.1:8050
 
 ### Layout Layer (`layouts/`)
 
-**`layout.py`** - Dash UI components
-- Bootstrap-styled layout
-- Interactive controls
-- Statistics cards
-- Responsive grid
+**`home.py`** - Homepage layout
+- Hero section with application description
+- Navigation cards to other pages
+- Feature overview
+
+**`codeletion.py`** - Co-deletion explorer layout
+- Study and chromosome selectors
+- Interactive heatmap visualization
+- Deletion frequency scatter plot
+- Top co-deleted pairs bar chart
+- Dataset statistics display
+
+**`summary.py`** - Summary statistics layout
+- Multi-study/chromosome filters
+- Distribution visualizations
+- Comparative analysis charts
+- Detailed statistics tables
 
 ### App Layer (`app.py`)
 
-**Callbacks:**
-1. `update_heatmap()` - Responds to colorscale/labels changes
-2. `update_top_pairs()` - Updates bar plot for N pairs
-3. `update_stats()` - Displays dataset statistics
+**Routing:**
+- URL-based page navigation with `dcc.Location`
+- Dynamic page loading based on pathname
+- 404 page for invalid routes
+
+**Co-Deletion Explorer Callbacks:**
+1. `populate_study_dropdown()` - Loads available studies
+2. `update_visualizations()` - Updates all three charts (heatmap, scatter, bar)
+3. `update_stats()` - Displays dataset statistics per chromosome
+
+**Summary Page Callbacks:**
+1. `populate_summary_study_dropdown()` - Loads study filter options
+2. `update_summary_stats()` - Updates statistics cards
+3. `update_summary_distribution()` - Distribution chart
+4. `update_chromosome_comparison()` - Chromosome comparison chart
+5. `update_study_comparison()` - Study comparison chart
+6. `update_summary_table()` - Detailed statistics table
 
 ## Design Principles
 
@@ -248,17 +289,38 @@ python app.py
 
 ## Features
 
+✅ **Multi-page application** - Separate pages for exploration, statistics, and navigation  
 ✅ **Multi-chromosome support** - Analyze all chromosomes (1-22, X, Y)  
 ✅ **Multi-study comparison** - 32 TCGA PanCancer Atlas studies  
 ✅ **Interactive visualizations** - Dash-powered heatmaps and scatter plots  
-✅ **Batch processing** - Automated analysis pipeline  
+✅ **Batch processing** - Automated analysis pipeline for 768 analyses  
 ✅ **Cytoband-ordered displays** - Genes sorted by chromosomal position  
+✅ **Smart caching** - Gene-specific cache keys for accurate data retrieval  
+✅ **Large dataset handling** - CSV format for chromosomes with >1000 genes  
+
+## Recent Updates
+
+### Multi-Page Application (v2.0)
+- Converted to multi-page architecture with URL routing
+- Added dedicated homepage with navigation
+- Separated co-deletion explorer and summary statistics into distinct pages
+- All existing functionality preserved and enhanced
+
+### Cache Bug Fix
+- Fixed critical caching issue causing incorrect data for non-chr13 chromosomes
+- Implemented MD5-hashed gene IDs in cache keys for unique identification
+- All 24 chromosomes now show accurate deletion frequencies
+
+### Stats Display Improvements
+- Clarified statistics: "Max Deletion Freq (%)" instead of misleading "Total Deletions"
+- Added "Genes with Deletions" count for better dataset understanding
 
 ## Future Enhancements
 
-- Gene search/filter functionality in Dash app
+- Complete summary statistics page implementation with real data aggregation
+- Gene search/filter functionality in co-deletion explorer
 - Download filtered datasets from UI
 - Custom deletion threshold selection
 - Network visualization of co-deletion clusters
-- Multi-study comparison overlays
+- Multi-study overlay comparisons
 - Statistical significance testing for co-deletions
