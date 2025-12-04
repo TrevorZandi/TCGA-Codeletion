@@ -382,20 +382,156 @@ def update_summary_stats(study_id, chromosome):
      Input('summary-chromosome-dropdown', 'value')]
 )
 def update_summary_distribution(study_id, chromosome):
-    """Update the deletion frequency distribution chart."""
-    fig = go.Figure()
-    fig.add_annotation(
-        text="Summary statistics visualization coming soon...",
-        xref="paper", yref="paper",
-        x=0.5, y=0.5, showarrow=False,
-        font=dict(size=16)
-    )
-    fig.update_layout(
-        height=400,
-        xaxis_title="Deletion Frequency",
-        yaxis_title="Count"
-    )
-    return fig
+    """
+    Update the deletion frequency distribution chart.
+    Shows all genes with cytobands on x-axis and deletion frequency on y-axis.
+    Only includes genes with at least one deletion across all studies.
+    """
+    try:
+        # Determine which studies and chromosomes to load
+        studies_to_load = [study_id] if study_id else processed_loader.list_available_studies()
+        
+        if chromosome == 'all':
+            chromosomes_to_load = [str(i) for i in range(1, 23)] + ['X', 'Y']
+        else:
+            chromosomes_to_load = [chromosome]
+        
+        # Collect all gene deletion data
+        all_gene_data = []
+        
+        for study in studies_to_load:
+            for chrom in chromosomes_to_load:
+                try:
+                    # Load deletion frequencies
+                    del_freqs = processed_loader.load_deletion_frequencies(chrom, study)
+                    
+                    # Load gene metadata for cytoband information
+                    gene_metadata = processed_loader.load_gene_metadata(chrom, study)
+                    
+                    # Create a mapping from gene name to cytoband
+                    gene_metadata['gene_name'] = gene_metadata['hugoGeneSymbol'] + ' (' + gene_metadata['entrezGeneId'].astype(str) + ')'
+                    cytoband_map = dict(zip(gene_metadata['gene_name'], gene_metadata['cytoband']))
+                    
+                    # Process each gene
+                    for gene_name, freq in del_freqs.items():
+                        if freq > 0:  # Only include genes with deletions
+                            cytoband = cytoband_map.get(gene_name, f"{chrom}q")
+                            gene_symbol = gene_name.split(' ')[0]
+                            
+                            all_gene_data.append({
+                                'gene': gene_symbol,
+                                'gene_full': gene_name,
+                                'chromosome': chrom,
+                                'cytoband': cytoband,
+                                'deletion_frequency': freq,
+                                'study': study
+                            })
+                            
+                except Exception as e:
+                    # Skip if data not available for this study/chromosome
+                    continue
+        
+        if not all_gene_data:
+            fig = go.Figure()
+            fig.add_annotation(
+                text="No deletion data available for selected filters",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, showarrow=False,
+                font=dict(size=16)
+            )
+            fig.update_layout(height=500)
+            return fig
+        
+        # Convert to DataFrame
+        import pandas as pd
+        df = pd.DataFrame(all_gene_data)
+        
+        # Average deletion frequency across studies for each gene
+        gene_avg = df.groupby(['gene', 'gene_full', 'chromosome', 'cytoband'])['deletion_frequency'].mean().reset_index()
+        
+        # Sort by chromosome and cytoband
+        chrom_order = {str(i): i for i in range(1, 23)}
+        chrom_order['X'] = 23
+        chrom_order['Y'] = 24
+        gene_avg['chrom_num'] = gene_avg['chromosome'].map(chrom_order)
+        gene_avg = gene_avg.sort_values(['chrom_num', 'cytoband'])
+        
+        # Create x-axis labels (cytoband)
+        gene_avg['x_label'] = gene_avg['cytoband']
+        gene_avg['x_pos'] = range(len(gene_avg))
+        
+        # Create figure
+        fig = go.Figure()
+        
+        # Group by chromosome for coloring
+        colors = {
+            '1': '#1f77b4', '2': '#ff7f0e', '3': '#2ca02c', '4': '#d62728',
+            '5': '#9467bd', '6': '#8c564b', '7': '#e377c2', '8': '#7f7f7f',
+            '9': '#bcbd22', '10': '#17becf', '11': '#1f77b4', '12': '#ff7f0e',
+            '13': '#2ca02c', '14': '#d62728', '15': '#9467bd', '16': '#8c564b',
+            '17': '#e377c2', '18': '#7f7f7f', '19': '#bcbd22', '20': '#17becf',
+            '21': '#1f77b4', '22': '#ff7f0e', 'X': '#2ca02c', 'Y': '#d62728'
+        }
+        
+        for chrom in gene_avg['chromosome'].unique():
+            chrom_data = gene_avg[gene_avg['chromosome'] == chrom]
+            fig.add_trace(go.Scatter(
+                x=chrom_data['x_pos'],
+                y=chrom_data['deletion_frequency'] * 100,  # Convert to percentage
+                mode='markers',
+                marker=dict(
+                    size=5,
+                    color=colors.get(chrom, '#888888'),
+                    opacity=0.6
+                ),
+                name=f'Chr {chrom}',
+                text=[f"{row['gene']}<br>{row['cytoband']}<br>{row['deletion_frequency']*100:.1f}%" 
+                      for _, row in chrom_data.iterrows()],
+                hovertemplate='%{text}<extra></extra>'
+            ))
+        
+        # Add chromosome boundaries as vertical lines
+        chrom_boundaries = gene_avg.groupby('chromosome')['x_pos'].min().values
+        for boundary in chrom_boundaries[1:]:  # Skip first
+            fig.add_vline(x=boundary - 0.5, line_dash="dash", line_color="gray", opacity=0.3)
+        
+        # Update layout
+        fig.update_layout(
+            height=600,
+            title={
+                'text': 'Deletion Frequency by Cytoband (Genes with Deletions Only)',
+                'x': 0.5,
+                'xanchor': 'center'
+            },
+            xaxis_title="Cytoband Position",
+            yaxis_title="Deletion Frequency (%)",
+            hovermode='closest',
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            xaxis=dict(
+                showticklabels=False  # Too many cytobands to show
+            )
+        )
+        
+        return fig
+        
+    except Exception as e:
+        # Error handling
+        fig = go.Figure()
+        fig.add_annotation(
+            text=f"Error loading data: {str(e)}",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(size=14, color="red")
+        )
+        fig.update_layout(height=500)
+        return fig
 
 
 # Callback: Update chromosome comparison chart
