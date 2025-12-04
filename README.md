@@ -130,10 +130,15 @@ python main.py X prad_tcga_pan_can_atlas_2018   # ChrX, PRAD
 - Export high-resolution images
 
 **Summary Statistics Features:**
+- **Deletion Frequency Distribution** - Genome-wide view of deletion patterns by cytoband
+  - X-axis: Genes ordered by chromosome and cytoband position
+  - Y-axis: Deletion frequency (%)
+  - Color-coded by chromosome
+  - Only displays genes with deletions (frequency > 0)
+  - Hover for gene symbol, cytoband, and exact deletion frequency
 - Filter by study and chromosome
-- Distribution charts across analyses
-- Comparative visualizations
-- Detailed statistics tables
+- Comparative visualizations across studies and chromosomes
+- Detailed statistics tables (coming soon)
 
 **Data Source:** Loads pre-processed files from `data/processed/{study_id}/chr{N}_*.xlsx` or `.csv`
 
@@ -213,10 +218,13 @@ Then open: http://127.0.0.1:8050
 **Summary Page Callbacks:**
 1. `populate_summary_study_dropdown()` - Loads study filter options
 2. `update_summary_stats()` - Updates statistics cards
-3. `update_summary_distribution()` - Distribution chart
-4. `update_chromosome_comparison()` - Chromosome comparison chart
-5. `update_study_comparison()` - Study comparison chart
-6. `update_summary_table()` - Detailed statistics table
+3. `update_summary_distribution()` - Genome-wide deletion frequency by cytoband
+   - Aggregates data across all selected studies/chromosomes
+   - Filters out genes with no deletions
+   - Orders genes by chromosomal position
+4. `update_chromosome_comparison()` - Chromosome comparison chart (placeholder)
+5. `update_study_comparison()` - Study comparison chart (placeholder)
+6. `update_summary_table()` - Detailed statistics table (placeholder)
 
 ## Design Principles
 
@@ -293,12 +301,20 @@ python app.py
 ✅ **Multi-chromosome support** - Analyze all chromosomes (1-22, X, Y)  
 ✅ **Multi-study comparison** - 32 TCGA PanCancer Atlas studies  
 ✅ **Interactive visualizations** - Dash-powered heatmaps and scatter plots  
+✅ **Genome-wide deletion visualization** - See deletion patterns across all genes and cytobands  
 ✅ **Batch processing** - Automated analysis pipeline for 768 analyses  
 ✅ **Cytoband-ordered displays** - Genes sorted by chromosomal position  
 ✅ **Smart caching** - Gene-specific cache keys for accurate data retrieval  
 ✅ **Large dataset handling** - CSV format for chromosomes with >1000 genes  
 
 ## Recent Updates
+
+### Genome-Wide Deletion Frequency Visualization (v2.1)
+- Implemented deletion frequency distribution by cytoband in Summary Statistics page
+- Displays all genes with deletions across selected studies and chromosomes
+- Genes ordered by chromosomal position for intuitive genomic context
+- Color-coded by chromosome with interactive hover information
+- Filters dynamically apply to show specific studies or chromosomes
 
 ### Multi-Page Application (v2.0)
 - Converted to multi-page architecture with URL routing
@@ -317,10 +333,13 @@ python app.py
 
 ## Future Enhancements
 
-- Complete summary statistics page implementation with real data aggregation
+- Complete remaining summary statistics visualizations:
+  - Chromosome comparison bar chart
+  - Study comparison chart
+  - Detailed statistics data table
 - Gene search/filter functionality in co-deletion explorer
 - Download filtered datasets from UI
 - Custom deletion threshold selection
 - Network visualization of co-deletion clusters
-- Multi-study overlay comparisons
+- Multi-study overlay comparisons in co-deletion heatmaps
 - Statistical significance testing for co-deletions
