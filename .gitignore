@@ -25,12 +25,16 @@ env/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Data files - Cache and Processed
+# Data files - Cache only (processed data needed for AWS deployment)
 data/cached/
+
+# Processed data (~6.1GB, too large for GitHub)
+# Upload to S3 for AWS deployment using: ./upload_data_to_s3.sh
 data/processed/
 
-# Excel files (too large for git)
+# Excel/CSV files
 *.xlsx
+*.csv
 !data/curated_data/*.xlsx
 !data/curated_data/*.csv
 

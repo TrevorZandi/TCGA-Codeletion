@@ -463,32 +463,21 @@ def update_summary_distribution(study_id, chromosome):
         # Create figure
         fig = go.Figure()
         
-        # Group by chromosome for coloring
-        colors = {
-            '1': '#1f77b4', '2': '#ff7f0e', '3': '#2ca02c', '4': '#d62728',
-            '5': '#9467bd', '6': '#8c564b', '7': '#e377c2', '8': '#7f7f7f',
-            '9': '#bcbd22', '10': '#17becf', '11': '#1f77b4', '12': '#ff7f0e',
-            '13': '#2ca02c', '14': '#d62728', '15': '#9467bd', '16': '#8c564b',
-            '17': '#e377c2', '18': '#7f7f7f', '19': '#bcbd22', '20': '#17becf',
-            '21': '#1f77b4', '22': '#ff7f0e', 'X': '#2ca02c', 'Y': '#d62728'
-        }
-        
-        for chrom in gene_avg['chromosome'].unique():
-            chrom_data = gene_avg[gene_avg['chromosome'] == chrom]
-            fig.add_trace(go.Scatter(
-                x=chrom_data['x_pos'],
-                y=chrom_data['deletion_frequency'] * 100,  # Convert to percentage
-                mode='markers',
-                marker=dict(
-                    size=5,
-                    color=colors.get(chrom, '#888888'),
-                    opacity=0.6
-                ),
-                name=f'Chr {chrom}',
-                text=[f"{row['gene']}<br>{row['cytoband']}<br>{row['deletion_frequency']*100:.1f}%" 
-                      for _, row in chrom_data.iterrows()],
-                hovertemplate='%{text}<extra></extra>'
-            ))
+        # Add all data as a single trace with uniform color
+        fig.add_trace(go.Scatter(
+            x=gene_avg['x_pos'],
+            y=gene_avg['deletion_frequency'] * 100,  # Convert to percentage
+            mode='markers',
+            marker=dict(
+                size=5,
+                color='#1f77b4',  # Single blue color
+                opacity=0.6
+            ),
+            showlegend=False,
+            text=[f"{row['gene']}<br>{row['cytoband']}<br>{row['deletion_frequency']*100:.1f}%" 
+                  for _, row in gene_avg.iterrows()],
+            hovertemplate='%{text}<extra></extra>'
+        ))
         
         # Add chromosome boundaries as vertical lines and calculate midpoints for labels
         chrom_boundaries = gene_avg.groupby('chromosome')['x_pos'].agg(['min', 'max'])
@@ -517,14 +506,7 @@ def update_summary_distribution(study_id, chromosome):
             xaxis_title="Chromosome",
             yaxis_title="Deletion Frequency (%)",
             hovermode='closest',
-            showlegend=True,
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="right",
-                x=1
-            ),
+            showlegend=False,
             xaxis=dict(
                 tickvals=chrom_tickvals,
                 ticktext=chrom_ticktext,

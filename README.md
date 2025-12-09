@@ -331,6 +331,45 @@ python app.py
 - Clarified statistics: "Max Deletion Freq (%)" instead of misleading "Total Deletions"
 - Added "Genes with Deletions" count for better dataset understanding
 
+## AWS Deployment
+
+This application is ready for deployment to AWS Elastic Beanstalk. See **[AWS_DEPLOYMENT_GUIDE.md](AWS_DEPLOYMENT_GUIDE.md)** for complete instructions.
+
+### Quick Deployment Overview
+
+**Prerequisites:**
+- AWS account configured
+- Processed data generated (`python batch_process.py`)
+- AWS CLI and EB CLI installed
+
+**Key Files for AWS:**
+- `application.py` - Elastic Beanstalk entry point (exposes WSGI server)
+- `requirements.txt` - Python dependencies
+- `.ebextensions/01_python.config` - EB configuration
+- `upload_data_to_s3.sh` - Helper script to upload processed data to S3
+
+**Recommended Deployment Strategy:**
+
+Since processed data is ~6.1GB (too large for GitHub), use AWS S3:
+
+```bash
+# 1. Upload data to S3
+./upload_data_to_s3.sh tcga-codeletion-data
+
+# 2. Initialize Elastic Beanstalk
+eb init -p python-3.11 tcga-codeletion-app
+
+# 3. Create environment with S3 configuration
+eb create tcga-codeletion-env
+eb setenv USE_S3=true S3_BUCKET=tcga-codeletion-data S3_PREFIX=processed/
+
+# 4. Deploy
+eb deploy
+eb open
+```
+
+**Note:** Full deployment guide includes S3 integration code, IAM configuration, and troubleshooting steps.
+
 ## Future Enhancements
 
 - Complete remaining summary statistics visualizations:
