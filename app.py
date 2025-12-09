@@ -490,10 +490,21 @@ def update_summary_distribution(study_id, chromosome):
                 hovertemplate='%{text}<extra></extra>'
             ))
         
-        # Add chromosome boundaries as vertical lines
-        chrom_boundaries = gene_avg.groupby('chromosome')['x_pos'].min().values
-        for boundary in chrom_boundaries[1:]:  # Skip first
-            fig.add_vline(x=boundary - 0.5, line_dash="dash", line_color="gray", opacity=0.3)
+        # Add chromosome boundaries as vertical lines and calculate midpoints for labels
+        chrom_boundaries = gene_avg.groupby('chromosome')['x_pos'].agg(['min', 'max'])
+        chrom_tickvals = []
+        chrom_ticktext = []
+        
+        for chrom in gene_avg['chromosome'].unique():
+            min_pos = chrom_boundaries.loc[chrom, 'min']
+            max_pos = chrom_boundaries.loc[chrom, 'max']
+            midpoint = (min_pos + max_pos) / 2
+            chrom_tickvals.append(midpoint)
+            chrom_ticktext.append(f'Chr {chrom}')
+            
+            # Add vertical line at chromosome boundary (except for first chromosome)
+            if min_pos > 0:
+                fig.add_vline(x=min_pos - 0.5, line_dash="dash", line_color="gray", opacity=0.3)
         
         # Update layout
         fig.update_layout(
@@ -503,7 +514,7 @@ def update_summary_distribution(study_id, chromosome):
                 'x': 0.5,
                 'xanchor': 'center'
             },
-            xaxis_title="Cytoband Position",
+            xaxis_title="Chromosome",
             yaxis_title="Deletion Frequency (%)",
             hovermode='closest',
             showlegend=True,
@@ -515,7 +526,9 @@ def update_summary_distribution(study_id, chromosome):
                 x=1
             ),
             xaxis=dict(
-                showticklabels=False  # Too many cytobands to show
+                tickvals=chrom_tickvals,
+                ticktext=chrom_ticktext,
+                tickangle=-45
             )
         )
         
