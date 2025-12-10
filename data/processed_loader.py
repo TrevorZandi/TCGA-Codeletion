@@ -273,8 +273,7 @@ def load_deletion_frequencies(chromosome="13", study_id="prad_tcga_pan_can_atlas
     Load individual gene deletion frequencies.
     
     If deletion_frequencies.xlsx doesn't exist (not uploaded to S3),
-    this will calculate them from the gene metadata (which contains cytoband info
-    and is used to derive frequencies in the analysis pipeline).
+    this will calculate them from the codeletion pairs file (gene_i == gene_j pairs).
     
     Args:
         chromosome: Chromosome number (default: "13")
@@ -301,17 +300,35 @@ def load_deletion_frequencies(chromosome="13", study_id="prad_tcga_pan_can_atlas
         return df.iloc[:, 0] if df.shape[1] == 1 else df.squeeze()
         
     except (FileNotFoundError, Exception):
-        # Fallback: Calculate from conditional matrix diagonal
-        # The diagonal of the conditional matrix P(i|i) gives deletion frequency
+        # Fallback: Extract from codeletion pairs where gene_i == gene_j
+        # These diagonal pairs represent individual gene deletion frequencies
         try:
-            cond_matrix = load_conditional_matrix(chromosome, study_id)
-            # Extract diagonal values (self-conditional probabilities = deletion frequencies)
-            deletion_freqs = pd.Series(
-                [cond_matrix.loc[gene, gene] if gene in cond_matrix.index else 0.0 
-                 for gene in cond_matrix.index],
-                index=cond_matrix.index
-            )
-            return deletion_freqs
+            pairs_df = load_codeletion_pairs(chromosome, study_id)
+            
+            # Filter for diagonal pairs (gene paired with itself)
+            diagonal_pairs = pairs_df[pairs_df['gene_i'] == pairs_df['gene_j']].copy()
+            
+            if len(diagonal_pairs) > 0:
+                # Extract deletion frequencies from diagonal pairs
+                deletion_freqs = pd.Series(
+                    diagonal_pairs['co_deletion_frequency'].values,
+                    index=diagonal_pairs['gene_i'].values,
+                    name='deletion_frequency'
+                )
+                return deletion_freqs
+            else:
+                # If no diagonal pairs, use conditional matrix as last resort
+                cond_matrix = load_conditional_matrix(chromosome, study_id)
+                # Get all genes from the matrix
+                genes = cond_matrix.index.tolist()
+                # Extract diagonal, replacing NaN with 0
+                deletion_freqs = pd.Series(
+                    [cond_matrix.loc[gene, gene] if not pd.isna(cond_matrix.loc[gene, gene]) else 0.0 
+                     for gene in genes],
+                    index=genes,
+                    name='deletion_frequency'
+                )
+                return deletion_freqs
         except Exception as e:
             raise FileNotFoundError(
                 f"Could not load or calculate deletion frequencies for chr{chromosome}, {study_id}: {e}"
