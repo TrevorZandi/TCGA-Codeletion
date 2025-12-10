@@ -26,11 +26,11 @@ pip install awsebcli
 cd /path/to/TCGA-Codeletion
 
 # Initialize EB application
-eb init -p python-3.12 tcga-codeletion-app --region us-east-1
+eb init -p python-3.14 tcga-codeletion-app --region us-east-1
 
 # When prompted:
 # - Application name: tcga-codeletion-app
-# - Python version: 3.12
+# - Python version: 3.14
 # - Set up SSH: Yes (recommended)
 ```
 
@@ -173,7 +173,7 @@ eb terminate             # Delete environment (stops charges)
 ### Initial Deployment
 ```bash
 cd /path/to/TCGA-Codeletion
-eb init -p python-3.12 tcga-codeletion-app --region us-east-1
+eb init -p python-3.14 tcga-codeletion-app --region us-east-1
 eb create tcga-codeletion-env
 eb setenv USE_S3=true S3_BUCKET=tcga-codeletion-data S3_PREFIX=processed/
 # Configure IAM role via AWS Console

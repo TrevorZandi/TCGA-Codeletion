@@ -357,7 +357,7 @@ Since processed data is ~6.1GB (too large for GitHub), use AWS S3:
 ./upload_data_to_s3.sh tcga-codeletion-data
 
 # 2. Initialize Elastic Beanstalk
-eb init -p python-3.11 tcga-codeletion-app
+eb init -p python-3.14 tcga-codeletion-app
 
 # 3. Create environment with S3 configuration
 eb create tcga-codeletion-env
