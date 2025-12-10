@@ -201,7 +201,7 @@ def create_codeletion_layout():
             dbc.Col([
                 html.Hr(),
                 html.Div(
-                    id='footer-info',
+                    id='codeletion-footer-info',
                     children=[
                         html.P(
                             [
@@ -210,6 +210,15 @@ def create_codeletion_layout():
                                        href="https://www.cbioportal.org/", 
                                        target="_blank"),
                                 " | TCGA PanCancer Atlas 2018"
+                            ],
+                            className="text-center text-muted small"
+                        ),
+                        html.P(
+                            [
+                                "Created by Trevor A. Zandi | ",
+                                html.A("GitHub",
+                                       href="https://github.com/TrevorZandi/TCGA-Codeletion",
+                                       target="_blank")
                             ],
                             className="text-center text-muted small"
                         )

@@ -195,6 +195,15 @@ def create_summary_layout():
                             " | TCGA PanCancer Atlas 2018"
                         ],
                         className="text-center text-muted small"
+                    ),
+                    html.P(
+                        [
+                            "Created by Trevor A. Zandi | ",
+                            html.A("GitHub",
+                                   href="https://github.com/TrevorZandi/TCGA-Codeletion",
+                                   target="_blank")
+                        ],
+                        className="text-center text-muted small"
                     )
                 ], className="mb-4")
             ])
