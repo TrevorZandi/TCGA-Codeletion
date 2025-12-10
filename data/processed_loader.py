@@ -2,11 +2,51 @@
 Data loader for processed co-deletion analysis results.
 
 This module provides functions to load pre-computed co-deletion matrices
-and statistics from the data/processed directory for visualization in Dash.
+and statistics from the data/processed directory or AWS S3 for visualization in Dash.
+
+Supports both local file system and AWS S3 storage based on environment variables:
+- USE_S3: Set to 'true' to use S3 storage
+- S3_BUCKET: Name of the S3 bucket (default: 'tcga-codeletion-data')
+- S3_PREFIX: Prefix path in S3 bucket (default: 'processed/')
 """
 
 import os
 import pandas as pd
+from io import BytesIO
+
+# Configuration from environment variables
+USE_S3 = os.environ.get('USE_S3', 'false').lower() == 'true'
+S3_BUCKET = os.environ.get('S3_BUCKET', 'tcga-codeletion-data')
+S3_PREFIX = os.environ.get('S3_PREFIX', 'processed/')
+
+# Initialize S3 client only if needed
+_s3_client = None
+
+def _get_s3_client():
+    """Get or create S3 client (lazy initialization)."""
+    global _s3_client
+    if _s3_client is None:
+        import boto3
+        _s3_client = boto3.client('s3')
+    return _s3_client
+
+
+def load_from_s3(s3_key):
+    """
+    Load file from S3 bucket.
+    
+    Args:
+        s3_key: S3 object key (path within bucket)
+        
+    Returns:
+        BytesIO object containing file data
+    """
+    s3 = _get_s3_client()
+    try:
+        obj = s3.get_object(Bucket=S3_BUCKET, Key=s3_key)
+        return BytesIO(obj['Body'].read())
+    except Exception as e:
+        raise FileNotFoundError(f"Failed to load from S3: s3://{S3_BUCKET}/{s3_key} - {str(e)}")
 
 
 def get_processed_dir(study_id=None):
@@ -18,14 +58,22 @@ def get_processed_dir(study_id=None):
     
     Returns:
         Absolute path to data/processed/ or data/processed/{study_id}/
+        Or S3 key prefix if USE_S3 is True
     """
-    module_dir = os.path.dirname(__file__)
-    processed_dir = os.path.join(module_dir, "processed")
-    
-    if study_id is not None:
-        return os.path.join(processed_dir, study_id)
-    
-    return processed_dir
+    if USE_S3:
+        # Return S3 key prefix
+        if study_id is not None:
+            return f"{S3_PREFIX}{study_id}/"
+        return S3_PREFIX
+    else:
+        # Return local file path
+        module_dir = os.path.dirname(__file__)
+        processed_dir = os.path.join(module_dir, "processed")
+        
+        if study_id is not None:
+            return os.path.join(processed_dir, study_id)
+        
+        return processed_dir
 
 
 def load_conditional_matrix(chromosome="13", study_id="prad_tcga_pan_can_atlas_2018"):
@@ -40,21 +88,42 @@ def load_conditional_matrix(chromosome="13", study_id="prad_tcga_pan_can_atlas_2
         DataFrame with conditional probabilities P(i|j)
     """
     processed_dir = get_processed_dir(study_id)
+    csv_filename = f"chr{chromosome}_codeletion_conditional_frequencies.csv"
+    xlsx_filename = f"chr{chromosome}_codeletion_conditional_frequencies.xlsx"
     
-    # Try CSV first (used for large chromosomes), then Excel
-    csv_filepath = os.path.join(processed_dir, f"chr{chromosome}_codeletion_conditional_frequencies.csv")
-    xlsx_filepath = os.path.join(processed_dir, f"chr{chromosome}_codeletion_conditional_frequencies.xlsx")
-    
-    if os.path.exists(csv_filepath):
-        df = pd.read_csv(csv_filepath, index_col=0)
-        return df
-    elif os.path.exists(xlsx_filepath):
-        df = pd.read_excel(xlsx_filepath, index_col=0)
-        return df
+    if USE_S3:
+        # Try CSV first, then Excel from S3
+        csv_key = processed_dir + csv_filename
+        xlsx_key = processed_dir + xlsx_filename
+        
+        s3 = _get_s3_client()
+        try:
+            # Check if CSV exists in S3
+            s3.head_object(Bucket=S3_BUCKET, Key=csv_key)
+            data = load_from_s3(csv_key)
+            return pd.read_csv(data, index_col=0)
+        except:
+            try:
+                # Fall back to Excel
+                data = load_from_s3(xlsx_key)
+                return pd.read_excel(data, index_col=0)
+            except:
+                raise FileNotFoundError(
+                    f"Conditional matrix not found in S3: {csv_key} or {xlsx_key}"
+                )
     else:
-        raise FileNotFoundError(
-            f"Conditional matrix not found: {xlsx_filepath} or {csv_filepath}"
-        )
+        # Load from local filesystem
+        csv_filepath = os.path.join(processed_dir, csv_filename)
+        xlsx_filepath = os.path.join(processed_dir, xlsx_filename)
+        
+        if os.path.exists(csv_filepath):
+            return pd.read_csv(csv_filepath, index_col=0)
+        elif os.path.exists(xlsx_filepath):
+            return pd.read_excel(xlsx_filepath, index_col=0)
+        else:
+            raise FileNotFoundError(
+                f"Conditional matrix not found: {xlsx_filepath} or {csv_filepath}"
+            )
 
 
 def load_frequency_matrix(chromosome="13", study_id="prad_tcga_pan_can_atlas_2018"):
@@ -70,13 +139,16 @@ def load_frequency_matrix(chromosome="13", study_id="prad_tcga_pan_can_atlas_201
     """
     processed_dir = get_processed_dir(study_id)
     filename = f"chr{chromosome}_codeletion_matrix.xlsx"
-    filepath = os.path.join(processed_dir, filename)
     
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Frequency matrix not found: {filepath}")
-    
-    df = pd.read_excel(filepath, index_col=0)
-    return df
+    if USE_S3:
+        s3_key = processed_dir + filename
+        data = load_from_s3(s3_key)
+        return pd.read_excel(data, index_col=0)
+    else:
+        filepath = os.path.join(processed_dir, filename)
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Frequency matrix not found: {filepath}")
+        return pd.read_excel(filepath, index_col=0)
 
 
 def load_codeletion_pairs(chromosome="13", study_id="prad_tcga_pan_can_atlas_2018"):
@@ -92,13 +164,16 @@ def load_codeletion_pairs(chromosome="13", study_id="prad_tcga_pan_can_atlas_201
     """
     processed_dir = get_processed_dir(study_id)
     filename = f"chr{chromosome}_codeletion_frequencies.xlsx"
-    filepath = os.path.join(processed_dir, filename)
     
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Co-deletion pairs not found: {filepath}")
-    
-    df = pd.read_excel(filepath)
-    return df
+    if USE_S3:
+        s3_key = processed_dir + filename
+        data = load_from_s3(s3_key)
+        return pd.read_excel(data)
+    else:
+        filepath = os.path.join(processed_dir, filename)
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Co-deletion pairs not found: {filepath}")
+        return pd.read_excel(filepath)
 
 
 def load_deletion_matrix(chromosome="13", study="prad"):
@@ -178,21 +253,28 @@ def load_gene_metadata(chromosome="13", study_id="prad_tcga_pan_can_atlas_2018")
     """
     processed_dir = get_processed_dir(study_id)
     filename = f"chr{chromosome}_genes_metadata.xlsx"
-    filepath = os.path.join(processed_dir, filename)
     
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(
-            f"Gene metadata not found: {filepath}. "
-            "Run batch_process.py to generate processed data for all studies."
-        )
-    
-    df = pd.read_excel(filepath)
-    return df
+    if USE_S3:
+        s3_key = processed_dir + filename
+        data = load_from_s3(s3_key)
+        return pd.read_excel(data)
+    else:
+        filepath = os.path.join(processed_dir, filename)
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(
+                f"Gene metadata not found: {filepath}. "
+                "Run batch_process.py to generate processed data for all studies."
+            )
+        return pd.read_excel(filepath)
 
 
 def load_deletion_frequencies(chromosome="13", study_id="prad_tcga_pan_can_atlas_2018"):
     """
     Load individual gene deletion frequencies.
+    
+    If deletion_frequencies.xlsx doesn't exist (not uploaded to S3),
+    this will calculate them from the gene metadata (which contains cytoband info
+    and is used to derive frequencies in the analysis pipeline).
     
     Args:
         chromosome: Chromosome number (default: "13")
@@ -203,14 +285,37 @@ def load_deletion_frequencies(chromosome="13", study_id="prad_tcga_pan_can_atlas
     """
     processed_dir = get_processed_dir(study_id)
     filename = f"chr{chromosome}_deletion_frequencies.xlsx"
-    filepath = os.path.join(processed_dir, filename)
     
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Deletion frequencies not found: {filepath}")
-    
-    df = pd.read_excel(filepath, index_col=0)
-    # Return as Series
-    return df.iloc[:, 0] if df.shape[1] == 1 else df.squeeze()
+    try:
+        if USE_S3:
+            s3_key = processed_dir + filename
+            data = load_from_s3(s3_key)
+            df = pd.read_excel(data, index_col=0)
+        else:
+            filepath = os.path.join(processed_dir, filename)
+            if not os.path.exists(filepath):
+                raise FileNotFoundError(f"Deletion frequencies not found: {filepath}")
+            df = pd.read_excel(filepath, index_col=0)
+        
+        # Return as Series
+        return df.iloc[:, 0] if df.shape[1] == 1 else df.squeeze()
+        
+    except (FileNotFoundError, Exception):
+        # Fallback: Calculate from conditional matrix diagonal
+        # The diagonal of the conditional matrix P(i|i) gives deletion frequency
+        try:
+            cond_matrix = load_conditional_matrix(chromosome, study_id)
+            # Extract diagonal values (self-conditional probabilities = deletion frequencies)
+            deletion_freqs = pd.Series(
+                [cond_matrix.loc[gene, gene] if gene in cond_matrix.index else 0.0 
+                 for gene in cond_matrix.index],
+                index=cond_matrix.index
+            )
+            return deletion_freqs
+        except Exception as e:
+            raise FileNotFoundError(
+                f"Could not load or calculate deletion frequencies for chr{chromosome}, {study_id}: {e}"
+            )
 
 
 def list_available_studies():
@@ -222,14 +327,42 @@ def list_available_studies():
     """
     processed_dir = get_processed_dir()
     
-    if not os.path.exists(processed_dir):
-        return []
-    
-    # Get all subdirectories (each represents a study)
-    studies = [d for d in os.listdir(processed_dir) 
-               if os.path.isdir(os.path.join(processed_dir, d))]
-    
-    return sorted(studies)
+    if USE_S3:
+        # List study directories from S3
+        s3 = _get_s3_client()
+        try:
+            # List objects with the prefix and delimiter to get "folders"
+            result = s3.list_objects_v2(
+                Bucket=S3_BUCKET,
+                Prefix=processed_dir,
+                Delimiter='/'
+            )
+            
+            if 'CommonPrefixes' not in result:
+                return []
+            
+            # Extract study names from prefixes
+            studies = []
+            for prefix in result['CommonPrefixes']:
+                # Remove the base prefix and trailing slash
+                study_id = prefix['Prefix'].replace(processed_dir, '').rstrip('/')
+                if study_id:
+                    studies.append(study_id)
+            
+            return sorted(studies)
+        except Exception as e:
+            print(f"Warning: Failed to list studies from S3: {e}")
+            return []
+    else:
+        # List from local filesystem
+        if not os.path.exists(processed_dir):
+            return []
+        
+        # Get all subdirectories (each represents a study)
+        studies = [d for d in os.listdir(processed_dir) 
+                   if os.path.isdir(os.path.join(processed_dir, d))]
+        
+        return sorted(studies)
 
 
 def list_available_analyses():
