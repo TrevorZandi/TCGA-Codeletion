@@ -23,7 +23,7 @@ pip install awsebcli
 ## Step 1: Initialize Elastic Beanstalk
 
 ```bash
-cd /path/to/Cbioportal
+cd /path/to/TCGA-Codeletion
 
 # Initialize EB application
 eb init -p python-3.12 tcga-codeletion-app --region us-east-1
@@ -172,6 +172,7 @@ eb terminate             # Delete environment (stops charges)
 
 ### Initial Deployment
 ```bash
+cd /path/to/TCGA-Codeletion
 eb init -p python-3.12 tcga-codeletion-app --region us-east-1
 eb create tcga-codeletion-env
 eb setenv USE_S3=true S3_BUCKET=tcga-codeletion-data S3_PREFIX=processed/

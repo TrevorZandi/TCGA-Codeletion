@@ -7,7 +7,7 @@ Multi-page Dash application for analyzing gene co-deletion patterns across TCGA 
 This project follows a clean separation between ETL pipeline and visualization:
 
 ```
-Cbioportal/
+TCGA-Codeletion/
 ├── main.py                          # ETL pipeline (single study/chromosome)
 ├── batch_process.py                 # ETL pipeline (all studies/chromosomes)
 ├── app.py                           # Multi-page Dash application
