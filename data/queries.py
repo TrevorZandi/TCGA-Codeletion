@@ -89,7 +89,7 @@ def get_cna_sample_list_id(study_id, refresh=False):
 
 def get_chromosome_genes(chromosome, genome="hg19", refresh=False):
     """
-    Get all genes on a specific chromosome.
+    Get all genes on a specific chromosome with genomic positions.
     
     Args:
         chromosome: Chromosome number or name (e.g., "13", "X")
@@ -97,21 +97,19 @@ def get_chromosome_genes(chromosome, genome="hg19", refresh=False):
         refresh: Force refresh from API
         
     Returns:
-        DataFrame with entrezGeneId and hugoGeneSymbol columns
+        DataFrame with entrezGeneId, hugoGeneSymbol, cytoband, start, end columns
     """
     genes = client.get_genes_by_genome(genome, refresh=refresh)
     
     # Filter by chromosome
     chr_genes = [g for g in genes if g.get("chromosome") == str(chromosome)]
     
-    # Build DataFrame with cytoband for position sorting
-    df = pd.DataFrame(chr_genes)[["entrezGeneId", "hugoGeneSymbol", "cytoband"]]
+    # Build DataFrame with genomic positions
+    df = pd.DataFrame(chr_genes)[["entrezGeneId", "hugoGeneSymbol", "cytoband", "start", "end"]]
     df = df.drop_duplicates("entrezGeneId")
     
-    # Sort by chromosomal position using cytoband
-    # Cytoband format: e.g., "13p12.1", "13q21.3"
-    # Split arm (p/q) and band for proper sorting
-    df = df.sort_values("cytoband").reset_index(drop=True)
+    # Sort by chromosomal position using start position
+    df = df.sort_values("start").reset_index(drop=True)
     
     return df
 

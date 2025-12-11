@@ -214,7 +214,7 @@ def plot_top_pairs_barplot(long_table, n=20, output_path=None):
     return fig
 
 
-def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, n=20, gene_filter=None):
+def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, gene_metadata=None, n=20, gene_filter=None):
     """
     Create a table showing top gene pairs with detailed statistics.
     
@@ -222,6 +222,7 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
         conditional_matrix: DataFrame where entry [i,j] represents P(gene_i deleted | gene_j deleted)
         deletion_freqs: Series with individual gene deletion frequencies
         joint_data: DataFrame with joint probabilities (codeletion pairs)
+        gene_metadata: DataFrame with gene positions (entrezGeneId, hugoGeneSymbol, start, end)
         n: Number of top pairs to display (default: 20)
         gene_filter: Optional gene name to filter results (case-insensitive)
         
@@ -230,6 +231,19 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
     """
     from dash import dash_table, html
     import numpy as np
+    
+    # Create gene position lookup if metadata provided
+    gene_positions = {}
+    if gene_metadata is not None and 'start' in gene_metadata.columns:
+        for _, row in gene_metadata.iterrows():
+            # Match genes by symbol with Entrez ID format: "SYMBOL (ENTREZ)"
+            symbol = row['hugoGeneSymbol']
+            entrez = row['entrezGeneId']
+            gene_key = f"{symbol} ({entrez})"
+            gene_positions[gene_key] = {
+                'start': row['start'],
+                'end': row['end']
+            }
     
     # Extract gene pairs with conditional probabilities
     pairs_list = []
@@ -269,6 +283,14 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
             # Get joint probability
             joint_prob = joint_lookup.get((gene_i, gene_j), np.nan)
             
+            # Calculate genomic distance
+            distance_bp = np.nan
+            if gene_i in gene_positions and gene_j in gene_positions:
+                pos_i = gene_positions[gene_i]
+                pos_j = gene_positions[gene_j]
+                # Distance from start of one gene to start of the other
+                distance_bp = abs(pos_i['start'] - pos_j['start'])
+            
             # Use maximum conditional probability for ranking
             max_cond_prob = max(
                 prob_i_given_j if not pd.isna(prob_i_given_j) else 0,
@@ -283,6 +305,7 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
                 'P(A|B)': prob_i_given_j,
                 'P(B|A)': prob_j_given_i,
                 'P(A,B)': joint_prob,
+                'Distance (bp)': distance_bp,
                 'max_cond': max_cond_prob
             })
     
@@ -325,6 +348,7 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
         columns=[
             {'name': 'Gene A', 'id': 'Gene A', 'type': 'text'},
             {'name': 'Gene B', 'id': 'Gene B', 'type': 'text'},
+            {'name': 'Distance (bp)', 'id': 'Distance (bp)', 'type': 'numeric', 'format': {'specifier': ',.0f'}},
             {'name': 'Freq Gene A', 'id': 'Freq A', 'type': 'numeric', 'format': {'specifier': '.2%'}},
             {'name': 'Freq Gene B', 'id': 'Freq B', 'type': 'numeric', 'format': {'specifier': '.2%'}},
             {'name': 'P(A|B)', 'id': 'P(A|B)', 'type': 'numeric', 'format': {'specifier': '.2%'}},

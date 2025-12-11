@@ -222,11 +222,18 @@ def update_top_pairs(n_pairs, study_id, chromosome, gene_search):
         study_id=study_id
     )
     
+    # Load gene metadata with positions
+    gene_metadata = processed_loader.load_gene_metadata(
+        chromosome=chromosome,
+        study_id=study_id
+    )
+    
     # Create table data
     table_data = codeletion_heatmap.create_top_pairs_table_data(
         conditional_matrix=conditional_matrix,
         deletion_freqs=deletion_freqs,
         joint_data=joint_data,
+        gene_metadata=gene_metadata,
         n=n_pairs,
         gene_filter=gene_search
     )
