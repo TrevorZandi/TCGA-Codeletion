@@ -214,6 +214,111 @@ def plot_top_pairs_barplot(long_table, n=20, output_path=None):
     return fig
 
 
+def create_top_conditional_pairs_figure(conditional_matrix, n=10):
+    """
+    Create a bar plot showing top gene pairs by conditional co-deletion frequency.
+    
+    This function extracts the top N gene pairs from the conditional probability 
+    matrix P(gene_i | gene_j) and displays them as a horizontal bar chart.
+    
+    Args:
+        conditional_matrix: DataFrame where entry [i,j] represents P(gene_i deleted | gene_j deleted)
+        n: Number of top pairs to display (default: 10)
+        
+    Returns:
+        Plotly Figure object
+    """
+    import numpy as np
+    
+    # Extract upper triangle (excluding diagonal) to avoid duplicates
+    # For conditional matrix, P(A|B) != P(B|A), so we'll take the maximum of the two
+    pairs_list = []
+    
+    genes = conditional_matrix.columns.tolist()
+    
+    for i in range(len(genes)):
+        for j in range(i+1, len(genes)):  # Upper triangle only
+            gene_i = genes[i]
+            gene_j = genes[j]
+            
+            # Get both conditional probabilities
+            prob_i_given_j = conditional_matrix.iloc[i, j]
+            prob_j_given_i = conditional_matrix.iloc[j, i]
+            
+            # Skip NaN values
+            if pd.isna(prob_i_given_j) and pd.isna(prob_j_given_i):
+                continue
+            
+            # Use the maximum conditional probability and note the direction
+            if pd.isna(prob_i_given_j):
+                max_prob = prob_j_given_i
+                primary_gene = gene_j
+                secondary_gene = gene_i
+            elif pd.isna(prob_j_given_i):
+                max_prob = prob_i_given_j
+                primary_gene = gene_i
+                secondary_gene = gene_j
+            elif prob_i_given_j >= prob_j_given_i:
+                max_prob = prob_i_given_j
+                primary_gene = gene_i
+                secondary_gene = gene_j
+            else:
+                max_prob = prob_j_given_i
+                primary_gene = gene_j
+                secondary_gene = gene_i
+            
+            pairs_list.append({
+                'primary_gene': primary_gene,
+                'secondary_gene': secondary_gene,
+                'conditional_probability': max_prob,
+                'pair_label': f"{primary_gene} | {secondary_gene}"
+            })
+    
+    # Convert to DataFrame and sort by conditional probability
+    pairs_df = pd.DataFrame(pairs_list)
+    
+    if pairs_df.empty:
+        # Return empty figure with message
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No co-deletion data available",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(size=16)
+        )
+        return fig
+    
+    top_pairs = pairs_df.sort_values("conditional_probability", ascending=False).head(n)
+    
+    # Create horizontal bar plot
+    fig = go.Figure()
+    
+    fig.add_trace(go.Bar(
+        x=top_pairs['conditional_probability'],
+        y=top_pairs['pair_label'],
+        orientation='h',
+        marker=dict(
+            color=top_pairs['conditional_probability'],
+            colorscale='Blues',
+            showscale=True,
+            colorbar=dict(title="P(A|B)")
+        ),
+        hovertemplate='<b>%{y}</b><br>Conditional Probability: %{x:.3f}<extra></extra>'
+    ))
+    
+    fig.update_layout(
+        title=f"Top {n} Gene Pairs by Conditional Co-deletion Frequency",
+        xaxis_title="Conditional Probability P(Gene A deleted | Gene B deleted)",
+        yaxis_title="Gene Pair (A | B)",
+        yaxis={'categoryorder': 'total ascending'},
+        template='plotly_white',
+        height=max(400, n * 30 + 100),
+        margin=dict(l=200, r=50, t=80, b=80)
+    )
+    
+    return fig
+
+
 def create_deletion_frequency_scatter(deletion_freqs, gene_metadata=None):
     """
     Create an interactive scatter plot of individual gene deletion frequencies (Dash-compatible).

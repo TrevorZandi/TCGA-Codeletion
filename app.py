@@ -190,6 +190,7 @@ def update_top_pairs(n_pairs, study_id, chromosome):
     Args:
         n_pairs: Number of top pairs to display
         study_id: Selected study identifier
+        chromosome: Chromosome identifier
         
     Returns:
         Updated Plotly figure
@@ -205,15 +206,15 @@ def update_top_pairs(n_pairs, study_id, chromosome):
         )
         return fig
     
-    # Load co-deletion pairs data for selected study and chromosome
-    pairs_data = processed_loader.load_codeletion_pairs(
+    # Load conditional co-deletion matrix for selected study and chromosome
+    conditional_matrix = processed_loader.load_conditional_matrix(
         chromosome=chromosome,
         study_id=study_id
     )
     
-    # Create figure
-    fig = codeletion_heatmap.create_top_pairs_figure(
-        long_table=pairs_data,
+    # Create figure with conditional probabilities
+    fig = codeletion_heatmap.create_top_conditional_pairs_figure(
+        conditional_matrix=conditional_matrix,
         n=n_pairs
     )
     
