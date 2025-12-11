@@ -313,29 +313,23 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
     # Sort by maximum conditional probability
     pairs_df = pairs_df.sort_values('max_cond', ascending=False)
     
-    # Drop the sorting column and format for display
+    # Drop the sorting column for display
     display_data = pairs_df.drop(columns=['max_cond']).copy()
     
-    # Format numeric columns as percentages
-    for col in ['Freq A', 'Freq B', 'P(A|B)', 'P(B|A)', 'P(A,B)']:
-        display_data[col] = display_data[col].apply(
-            lambda x: f"{x*100:.2f}%" if not pd.isna(x) else "N/A"
-        )
-    
-    # Convert to dict for DataTable
+    # Convert to dict for DataTable (keep numeric values)
     table_records = display_data.to_dict('records')
     
     # Create DataTable with all data, but display only n rows per page
     table = dash_table.DataTable(
         data=table_records,
         columns=[
-            {'name': 'Gene A', 'id': 'Gene A'},
-            {'name': 'Gene B', 'id': 'Gene B'},
-            {'name': 'Freq Gene A', 'id': 'Freq A'},
-            {'name': 'Freq Gene B', 'id': 'Freq B'},
-            {'name': 'P(A|B)', 'id': 'P(A|B)'},
-            {'name': 'P(B|A)', 'id': 'P(B|A)'},
-            {'name': 'P(A,B)', 'id': 'P(A,B)'}
+            {'name': 'Gene A', 'id': 'Gene A', 'type': 'text'},
+            {'name': 'Gene B', 'id': 'Gene B', 'type': 'text'},
+            {'name': 'Freq Gene A', 'id': 'Freq A', 'type': 'numeric', 'format': {'specifier': '.2%'}},
+            {'name': 'Freq Gene B', 'id': 'Freq B', 'type': 'numeric', 'format': {'specifier': '.2%'}},
+            {'name': 'P(A|B)', 'id': 'P(A|B)', 'type': 'numeric', 'format': {'specifier': '.2%'}},
+            {'name': 'P(B|A)', 'id': 'P(B|A)', 'type': 'numeric', 'format': {'specifier': '.2%'}},
+            {'name': 'P(A,B)', 'id': 'P(A,B)', 'type': 'numeric', 'format': {'specifier': '.2%'}}
         ],
         style_table={'overflowX': 'auto'},
         style_cell={
