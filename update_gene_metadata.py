@@ -23,7 +23,7 @@ CHROMOSOMES = [str(i) for i in range(1, 23)] + ['X', 'Y']
 
 # Load study list
 studies_df = pd.read_csv("data/curated_data/TCGA_study_names.csv")
-STUDIES = studies_df["study_id"].tolist()
+STUDIES = studies_df["TCGA_study"].tolist()
 
 
 def upload_metadata_to_s3(study_id, chromosome, metadata_df):
