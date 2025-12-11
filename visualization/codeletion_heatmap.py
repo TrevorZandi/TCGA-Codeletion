@@ -306,11 +306,11 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
                 className="text-center text-muted p-4"
             )
     
-    # Sort by maximum conditional probability and take top N
-    top_pairs = pairs_df.sort_values('max_cond', ascending=False).head(n)
+    # Sort by maximum conditional probability
+    pairs_df = pairs_df.sort_values('max_cond', ascending=False)
     
     # Drop the sorting column and format for display
-    display_data = top_pairs.drop(columns=['max_cond']).copy()
+    display_data = pairs_df.drop(columns=['max_cond']).copy()
     
     # Format numeric columns as percentages
     for col in ['Freq A', 'Freq B', 'P(A|B)', 'P(B|A)', 'P(A,B)']:
@@ -321,7 +321,7 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
     # Convert to dict for DataTable
     table_records = display_data.to_dict('records')
     
-    # Create DataTable
+    # Create DataTable with all data, but display only n rows per page
     table = dash_table.DataTable(
         data=table_records,
         columns=[
@@ -352,6 +352,7 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
             }
         ],
         page_size=n,
+        page_action='native',
         sort_action='native',
         filter_action='native'
     )
