@@ -168,18 +168,33 @@ def create_codeletion_layout():
                 dbc.Card([
                     dbc.CardHeader(html.H5("Top Co-deleted Gene Pairs")),
                     dbc.CardBody([
-                        # Number of top pairs selector
-                        html.Label("Number of top pairs to display:", className="fw-bold mb-2"),
-                        dcc.Slider(
-                            id='n-pairs-slider',
-                            min=10,
-                            max=50,
-                            step=5,
-                            value=20,
-                            marks={i: str(i) for i in range(10, 51, 10)},
-                            tooltip={"placement": "bottom", "always_visible": True},
-                            className="mb-3"
-                        ),
+                        dbc.Row([
+                            dbc.Col([
+                                # Gene search bar
+                                html.Label("Search for specific gene:", className="fw-bold mb-2"),
+                                dcc.Input(
+                                    id='gene-search-input',
+                                    type='text',
+                                    placeholder='Enter gene name (e.g., TP53, RB1)...',
+                                    className="form-control mb-3",
+                                    debounce=True
+                                )
+                            ], width=12, lg=6),
+                            dbc.Col([
+                                # Number of top pairs selector
+                                html.Label("Number of top pairs to display:", className="fw-bold mb-2"),
+                                dcc.Slider(
+                                    id='n-pairs-slider',
+                                    min=10,
+                                    max=50,
+                                    step=5,
+                                    value=20,
+                                    marks={i: str(i) for i in range(10, 51, 10)},
+                                    tooltip={"placement": "bottom", "always_visible": True},
+                                    className="mb-3"
+                                )
+                            ], width=12, lg=6)
+                        ]),
                         dcc.Loading(
                             id="loading-barplot",
                             type="default",

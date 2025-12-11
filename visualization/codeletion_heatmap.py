@@ -214,7 +214,7 @@ def plot_top_pairs_barplot(long_table, n=20, output_path=None):
     return fig
 
 
-def create_top_conditional_pairs_figure(conditional_matrix, n=10):
+def create_top_conditional_pairs_figure(conditional_matrix, n=10, gene_filter=None):
     """
     Create a bar plot showing top gene pairs by conditional co-deletion frequency.
     
@@ -224,6 +224,7 @@ def create_top_conditional_pairs_figure(conditional_matrix, n=10):
     Args:
         conditional_matrix: DataFrame where entry [i,j] represents P(gene_i deleted | gene_j deleted)
         n: Number of top pairs to display (default: 10)
+        gene_filter: Optional gene name to filter results (case-insensitive)
         
     Returns:
         Plotly Figure object
@@ -288,6 +289,26 @@ def create_top_conditional_pairs_figure(conditional_matrix, n=10):
         )
         return fig
     
+    # Apply gene filter if provided
+    if gene_filter and gene_filter.strip():
+        gene_filter_upper = gene_filter.strip().upper()
+        # Filter for pairs where either gene contains the search term
+        mask = (
+            pairs_df['primary_gene'].str.upper().str.contains(gene_filter_upper, na=False) |
+            pairs_df['secondary_gene'].str.upper().str.contains(gene_filter_upper, na=False)
+        )
+        pairs_df = pairs_df[mask]
+        
+        if pairs_df.empty:
+            fig = go.Figure()
+            fig.add_annotation(
+                text=f"No gene pairs found containing '{gene_filter}'",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, showarrow=False,
+                font=dict(size=16)
+            )
+            return fig
+    
     top_pairs = pairs_df.sort_values("conditional_probability", ascending=False).head(n)
     
     # Create horizontal bar plot
@@ -306,8 +327,14 @@ def create_top_conditional_pairs_figure(conditional_matrix, n=10):
         hovertemplate='<b>%{y}</b><br>Conditional Probability: %{x:.3f}<extra></extra>'
     ))
     
+    # Update title based on whether filter is applied
+    if gene_filter and gene_filter.strip():
+        title = f"Top {n} Gene Pairs Containing '{gene_filter}' by Conditional Co-deletion Frequency"
+    else:
+        title = f"Top {n} Gene Pairs by Conditional Co-deletion Frequency"
+    
     fig.update_layout(
-        title=f"Top {n} Gene Pairs by Conditional Co-deletion Frequency",
+        title=title,
         xaxis_title="Conditional Probability P(Gene A deleted | Gene B deleted)",
         yaxis_title="Gene Pair (A | B)",
         yaxis={'categoryorder': 'total ascending'},

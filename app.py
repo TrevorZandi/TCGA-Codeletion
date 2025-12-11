@@ -180,17 +180,19 @@ def update_heatmap(colorscale, n_labels, study_id, chromosome):
     [
         Input('n-pairs-slider', 'value'),
         Input('study-dropdown', 'value'),
-        Input('chromosome-dropdown', 'value')
+        Input('chromosome-dropdown', 'value'),
+        Input('gene-search-input', 'value')
     ]
 )
-def update_top_pairs(n_pairs, study_id, chromosome):
+def update_top_pairs(n_pairs, study_id, chromosome, gene_search):
     """
-    Update the top pairs bar plot based on selected number of pairs.
+    Update the top pairs bar plot based on selected number of pairs and optional gene search.
     
     Args:
         n_pairs: Number of top pairs to display
         study_id: Selected study identifier
         chromosome: Chromosome identifier
+        gene_search: Optional gene name to filter results
         
     Returns:
         Updated Plotly figure
@@ -215,7 +217,8 @@ def update_top_pairs(n_pairs, study_id, chromosome):
     # Create figure with conditional probabilities
     fig = codeletion_heatmap.create_top_conditional_pairs_figure(
         conditional_matrix=conditional_matrix,
-        n=n_pairs
+        n=n_pairs,
+        gene_filter=gene_search
     )
     
     return fig
