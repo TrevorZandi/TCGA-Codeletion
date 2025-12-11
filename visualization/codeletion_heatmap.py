@@ -238,12 +238,21 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
         for _, row in gene_metadata.iterrows():
             # Match genes by symbol with Entrez ID format: "SYMBOL (ENTREZ)"
             symbol = row['hugoGeneSymbol']
-            entrez = row['entrezGeneId']
+            entrez = int(row['entrezGeneId'])  # Ensure integer
             gene_key = f"{symbol} ({entrez})"
             gene_positions[gene_key] = {
-                'start': row['start'],
-                'end': row['end']
+                'start': int(row['start']),
+                'end': int(row['end'])
             }
+    
+    # Debug: print first few gene keys and matrix columns to verify matching
+    if gene_metadata is not None and len(gene_positions) > 0:
+        genes = conditional_matrix.columns.tolist()
+        print(f"DEBUG: First 3 metadata keys: {list(gene_positions.keys())[:3]}")
+        print(f"DEBUG: First 3 matrix columns: {genes[:3]}")
+        print(f"DEBUG: Total genes in positions: {len(gene_positions)}")
+        print(f"DEBUG: Total genes in matrix: {len(genes)}")
+
     
     # Extract gene pairs with conditional probabilities
     pairs_list = []
