@@ -262,6 +262,10 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
             freq_i = deletion_freqs.get(gene_i, np.nan)
             freq_j = deletion_freqs.get(gene_j, np.nan)
             
+            # Skip pairs where either gene is never deleted
+            if pd.isna(freq_i) or pd.isna(freq_j) or freq_i == 0 or freq_j == 0:
+                continue
+            
             # Get joint probability
             joint_prob = joint_lookup.get((gene_i, gene_j), np.nan)
             
