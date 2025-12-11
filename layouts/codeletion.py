@@ -198,13 +198,7 @@ def create_codeletion_layout():
                         dcc.Loading(
                             id="loading-barplot",
                             type="default",
-                            children=dcc.Graph(
-                                id='top-pairs-barplot',
-                                config={
-                                    'displayModeBar': True,
-                                    'displaylogo': False
-                                }
-                            )
+                            children=html.Div(id='top-pairs-table')
                         )
                     ])
                 ])

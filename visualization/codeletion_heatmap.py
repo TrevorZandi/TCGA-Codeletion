@@ -214,6 +214,151 @@ def plot_top_pairs_barplot(long_table, n=20, output_path=None):
     return fig
 
 
+def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, n=20, gene_filter=None):
+    """
+    Create a table showing top gene pairs with detailed statistics.
+    
+    Args:
+        conditional_matrix: DataFrame where entry [i,j] represents P(gene_i deleted | gene_j deleted)
+        deletion_freqs: Series with individual gene deletion frequencies
+        joint_data: DataFrame with joint probabilities (codeletion pairs)
+        n: Number of top pairs to display (default: 20)
+        gene_filter: Optional gene name to filter results (case-insensitive)
+        
+    Returns:
+        Dash DataTable component
+    """
+    from dash import dash_table, html
+    import numpy as np
+    
+    # Extract gene pairs with conditional probabilities
+    pairs_list = []
+    genes = conditional_matrix.columns.tolist()
+    
+    # Create a lookup dictionary for joint probabilities
+    joint_lookup = {}
+    if joint_data is not None and not joint_data.empty:
+        for _, row in joint_data.iterrows():
+            gene_i = row['gene_i']
+            gene_j = row['gene_j']
+            joint_prob = row['co_deletion_frequency']
+            joint_lookup[(gene_i, gene_j)] = joint_prob
+            joint_lookup[(gene_j, gene_i)] = joint_prob  # Symmetric
+    
+    for i in range(len(genes)):
+        for j in range(i+1, len(genes)):  # Upper triangle only
+            gene_i = genes[i]
+            gene_j = genes[j]
+            
+            # Get conditional probabilities
+            prob_i_given_j = conditional_matrix.iloc[i, j]
+            prob_j_given_i = conditional_matrix.iloc[j, i]
+            
+            # Skip if both are NaN
+            if pd.isna(prob_i_given_j) and pd.isna(prob_j_given_i):
+                continue
+            
+            # Get individual deletion frequencies
+            freq_i = deletion_freqs.get(gene_i, np.nan)
+            freq_j = deletion_freqs.get(gene_j, np.nan)
+            
+            # Get joint probability
+            joint_prob = joint_lookup.get((gene_i, gene_j), np.nan)
+            
+            # Use maximum conditional probability for ranking
+            max_cond_prob = max(
+                prob_i_given_j if not pd.isna(prob_i_given_j) else 0,
+                prob_j_given_i if not pd.isna(prob_j_given_i) else 0
+            )
+            
+            pairs_list.append({
+                'Gene A': gene_i,
+                'Gene B': gene_j,
+                'Freq A': freq_i,
+                'Freq B': freq_j,
+                'P(A|B)': prob_i_given_j,
+                'P(B|A)': prob_j_given_i,
+                'P(A,B)': joint_prob,
+                'max_cond': max_cond_prob
+            })
+    
+    # Convert to DataFrame
+    pairs_df = pd.DataFrame(pairs_list)
+    
+    if pairs_df.empty:
+        return html.Div(
+            "No co-deletion data available",
+            className="text-center text-muted p-4"
+        )
+    
+    # Apply gene filter if provided
+    if gene_filter and gene_filter.strip():
+        gene_filter_upper = gene_filter.strip().upper()
+        mask = (
+            pairs_df['Gene A'].str.upper().str.contains(gene_filter_upper, na=False) |
+            pairs_df['Gene B'].str.upper().str.contains(gene_filter_upper, na=False)
+        )
+        pairs_df = pairs_df[mask]
+        
+        if pairs_df.empty:
+            return html.Div(
+                f"No gene pairs found containing '{gene_filter}'",
+                className="text-center text-muted p-4"
+            )
+    
+    # Sort by maximum conditional probability and take top N
+    top_pairs = pairs_df.sort_values('max_cond', ascending=False).head(n)
+    
+    # Drop the sorting column and format for display
+    display_data = top_pairs.drop(columns=['max_cond']).copy()
+    
+    # Format numeric columns as percentages
+    for col in ['Freq A', 'Freq B', 'P(A|B)', 'P(B|A)', 'P(A,B)']:
+        display_data[col] = display_data[col].apply(
+            lambda x: f"{x*100:.2f}%" if not pd.isna(x) else "N/A"
+        )
+    
+    # Convert to dict for DataTable
+    table_records = display_data.to_dict('records')
+    
+    # Create DataTable
+    table = dash_table.DataTable(
+        data=table_records,
+        columns=[
+            {'name': 'Gene A', 'id': 'Gene A'},
+            {'name': 'Gene B', 'id': 'Gene B'},
+            {'name': 'Freq Gene A', 'id': 'Freq A'},
+            {'name': 'Freq Gene B', 'id': 'Freq B'},
+            {'name': 'P(A|B)', 'id': 'P(A|B)'},
+            {'name': 'P(B|A)', 'id': 'P(B|A)'},
+            {'name': 'P(A,B)', 'id': 'P(A,B)'}
+        ],
+        style_table={'overflowX': 'auto'},
+        style_cell={
+            'textAlign': 'left',
+            'padding': '10px',
+            'fontFamily': 'Arial, sans-serif',
+            'fontSize': '14px'
+        },
+        style_header={
+            'backgroundColor': '#f8f9fa',
+            'fontWeight': 'bold',
+            'borderBottom': '2px solid #dee2e6'
+        },
+        style_data_conditional=[
+            {
+                'if': {'row_index': 'odd'},
+                'backgroundColor': '#f8f9fa'
+            }
+        ],
+        page_size=n,
+        sort_action='native',
+        filter_action='native'
+    )
+    
+    return table
+
+
 def create_top_conditional_pairs_figure(conditional_matrix, n=10, gene_filter=None):
     """
     Create a bar plot showing top gene pairs by conditional co-deletion frequency.

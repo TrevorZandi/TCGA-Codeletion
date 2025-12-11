@@ -174,9 +174,9 @@ def update_heatmap(colorscale, n_labels, study_id, chromosome):
     return fig
 
 
-# Callback: Update top pairs bar plot
+# Callback: Update top pairs table
 @app.callback(
-    Output('top-pairs-barplot', 'figure'),
+    Output('top-pairs-table', 'children'),
     [
         Input('n-pairs-slider', 'value'),
         Input('study-dropdown', 'value'),
@@ -186,7 +186,7 @@ def update_heatmap(colorscale, n_labels, study_id, chromosome):
 )
 def update_top_pairs(n_pairs, study_id, chromosome, gene_search):
     """
-    Update the top pairs bar plot based on selected number of pairs and optional gene search.
+    Update the top pairs table based on selected number of pairs and optional gene search.
     
     Args:
         n_pairs: Number of top pairs to display
@@ -195,18 +195,14 @@ def update_top_pairs(n_pairs, study_id, chromosome, gene_search):
         gene_search: Optional gene name to filter results
         
     Returns:
-        Updated Plotly figure
+        Dash DataTable component
     """
     # Handle None or empty study_id
     if study_id is None or study_id == 'none':
-        fig = go.Figure()
-        fig.add_annotation(
-            text="No data available",
-            xref="paper", yref="paper",
-            x=0.5, y=0.5, showarrow=False,
-            font=dict(size=16)
+        return html.Div(
+            "No data available",
+            className="text-center text-muted p-4"
         )
-        return fig
     
     # Load conditional co-deletion matrix for selected study and chromosome
     conditional_matrix = processed_loader.load_conditional_matrix(
@@ -214,14 +210,28 @@ def update_top_pairs(n_pairs, study_id, chromosome, gene_search):
         study_id=study_id
     )
     
-    # Create figure with conditional probabilities
-    fig = codeletion_heatmap.create_top_conditional_pairs_figure(
+    # Load deletion frequencies
+    deletion_freqs = processed_loader.load_deletion_frequencies(
+        chromosome=chromosome,
+        study_id=study_id
+    )
+    
+    # Load joint probabilities (codeletion pairs)
+    joint_data = processed_loader.load_codeletion_pairs(
+        chromosome=chromosome,
+        study_id=study_id
+    )
+    
+    # Create table data
+    table_data = codeletion_heatmap.create_top_pairs_table_data(
         conditional_matrix=conditional_matrix,
+        deletion_freqs=deletion_freqs,
+        joint_data=joint_data,
         n=n_pairs,
         gene_filter=gene_search
     )
     
-    return fig
+    return table_data
 
 
 # Callback: Update deletion frequency scatter plot
