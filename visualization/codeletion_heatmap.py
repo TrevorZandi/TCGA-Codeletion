@@ -691,8 +691,11 @@ def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_dis
             gene_j = genes[j]
             
             # Get conditional probabilities (both directions)
-            prob_i_given_j = conditional_matrix.iloc[i, j]
-            prob_j_given_i = conditional_matrix.iloc[j, i]
+            # Matrix entry [row, col] = P(row | col) = P(row deleted | col deleted)
+            # So conditional_matrix.iloc[i, j] = P(gene_i | gene_j)
+            # And conditional_matrix.iloc[j, i] = P(gene_j | gene_i)
+            prob_i_given_j = conditional_matrix.iloc[i, j]  # P(gene_i | gene_j)
+            prob_j_given_i = conditional_matrix.iloc[j, i]  # P(gene_j | gene_i)
             
             # Skip if both are NaN or both are 0
             if (pd.isna(prob_i_given_j) or prob_i_given_j == 0) and \
@@ -714,30 +717,34 @@ def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_dis
                 if distance_bp < min_distance:
                     continue
                 
-                # Add data point for P(i|j) if non-zero
-                if not pd.isna(prob_i_given_j) and prob_i_given_j > 0:
+                # Add data point for P(gene_j | gene_i) if non-zero
+                # When gene_i is "A", we want P(B|A) which is P(gene_j | gene_i)
+                if not pd.isna(prob_j_given_i) and prob_j_given_i > 0:
                     gene_a_symbol = gene_i.split()[0]
-                    # Apply gene filter if specified
+                    gene_b_symbol = gene_j.split()[0]
+                    # Apply gene filter if specified (filter for gene A)
                     if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
                         pairs_data.append({
                             'gene_a': gene_i,
                             'gene_b': gene_j,
                             'distance_bp': distance_bp,
-                            'conditional_prob': prob_i_given_j,
-                            'direction': f"{gene_a_symbol} | {gene_j.split()[0]}"
+                            'conditional_prob': prob_j_given_i,  # P(B|A) = P(gene_j | gene_i)
+                            'direction': f"{gene_b_symbol} | {gene_a_symbol}"  # Display as B|A
                         })
                 
-                # Add data point for P(j|i) if non-zero
-                if not pd.isna(prob_j_given_i) and prob_j_given_i > 0:
+                # Add data point for P(gene_i | gene_j) if non-zero
+                # When gene_j is "A", we want P(B|A) which is P(gene_i | gene_j)
+                if not pd.isna(prob_i_given_j) and prob_i_given_j > 0:
                     gene_a_symbol = gene_j.split()[0]
-                    # Apply gene filter if specified
+                    gene_b_symbol = gene_i.split()[0]
+                    # Apply gene filter if specified (filter for gene A)
                     if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
                         pairs_data.append({
                             'gene_a': gene_j,
                             'gene_b': gene_i,
                             'distance_bp': distance_bp,
-                            'conditional_prob': prob_j_given_i,
-                            'direction': f"{gene_a_symbol} | {gene_i.split()[0]}"
+                            'conditional_prob': prob_i_given_j,  # P(B|A) = P(gene_i | gene_j)
+                            'direction': f"{gene_b_symbol} | {gene_a_symbol}"  # Display as B|A
                         })
     
     if not pairs_data:
