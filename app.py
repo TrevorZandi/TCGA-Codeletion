@@ -264,11 +264,14 @@ def update_top_pairs(n_pairs, study_id, chromosome, gene_search,
         Input('scatter-min-distance', 'value'),
         Input('scatter-max-distance', 'value'),
         Input('scatter-min-pba', 'value'),
-        Input('scatter-max-pba', 'value')
+        Input('scatter-max-pba', 'value'),
+        Input('scatter-min-freq-a', 'value'),
+        Input('scatter-max-freq-a', 'value')
     ]
 )
 def update_distance_scatter(study_id, chromosome, gene_filter,
-                           min_distance, max_distance, min_pba, max_pba):
+                           min_distance, max_distance, min_pba, max_pba,
+                           min_freq_a, max_freq_a):
     """
     Update the distance vs conditional probability scatter plot.
     
@@ -303,15 +306,24 @@ def update_distance_scatter(study_id, chromosome, gene_filter,
         study_id=study_id
     )
     
+    # Load deletion frequencies
+    deletion_freqs = processed_loader.load_deletion_frequencies(
+        chromosome=chromosome,
+        study_id=study_id
+    )
+    
     # Create scatter plot with gene filter
     fig = codeletion_heatmap.create_distance_frequency_scatter(
         conditional_matrix=conditional_matrix,
         gene_metadata=gene_metadata,
+        deletion_freqs=deletion_freqs,
         gene_filter=gene_filter if gene_filter and gene_filter.strip() else None,
         min_distance=min_distance if min_distance else 0,
         max_distance=max_distance,
         min_pba=min_pba,
-        max_pba=max_pba
+        max_pba=max_pba,
+        min_freq_a=min_freq_a,
+        max_freq_a=max_freq_a
     )
     
     return fig

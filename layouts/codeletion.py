@@ -360,6 +360,32 @@ def create_codeletion_layout():
                                     className="form-control form-control-sm mb-2",
                                     debounce=True
                                 )
+                            ], width=6, lg=2),
+                            dbc.Col([
+                                html.Label("Min Freq(A):", className="small"),
+                                dcc.Input(
+                                    id='scatter-min-freq-a',
+                                    type='number',
+                                    min=0,
+                                    max=1,
+                                    step=0.01,
+                                    placeholder='0-1',
+                                    className="form-control form-control-sm mb-2",
+                                    debounce=True
+                                )
+                            ], width=6, lg=2),
+                            dbc.Col([
+                                html.Label("Max Freq(A):", className="small"),
+                                dcc.Input(
+                                    id='scatter-max-freq-a',
+                                    type='number',
+                                    min=0,
+                                    max=1,
+                                    step=0.01,
+                                    placeholder='0-1',
+                                    className="form-control form-control-sm mb-2",
+                                    debounce=True
+                                )
                             ], width=6, lg=2)
                         ], className="mb-3"),
                         dcc.Loading(

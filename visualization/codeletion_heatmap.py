@@ -763,6 +763,14 @@ def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_dis
                         gene_b_symbol = gene_j.split()[0]
                         # Apply gene filter if specified (filter for gene A)
                         if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
+                            # Apply deletion frequency filter for gene A
+                            if deletion_freqs is not None:
+                                gene_a_freq = deletion_freqs.get(gene_i, 0)
+                                if min_freq_a is not None and gene_a_freq < min_freq_a:
+                                    continue
+                                if max_freq_a is not None and gene_a_freq > max_freq_a:
+                                    continue
+                            
                             pairs_data.append({
                                 'gene_a': gene_i,
                                 'gene_b': gene_j,
@@ -784,6 +792,14 @@ def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_dis
                         gene_b_symbol = gene_i.split()[0]
                         # Apply gene filter if specified (filter for gene A)
                         if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
+                            # Apply deletion frequency filter for gene A
+                            if deletion_freqs is not None:
+                                gene_a_freq = deletion_freqs.get(gene_j, 0)
+                                if min_freq_a is not None and gene_a_freq < min_freq_a:
+                                    continue
+                                if max_freq_a is not None and gene_a_freq > max_freq_a:
+                                    continue
+                            
                             pairs_data.append({
                                 'gene_a': gene_j,
                                 'gene_b': gene_i,
