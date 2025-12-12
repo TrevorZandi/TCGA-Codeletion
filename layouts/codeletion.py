@@ -311,82 +311,23 @@ def create_codeletion_layout():
                                 )
                             ], width=12, lg=6, className="mb-3")
                         ]),
-                        # Numerical filters for scatter plot
+                        # Deletion frequency filter for scatter plot
                         html.Hr(),
-                        html.Label("Numerical Filters (optional):", className="fw-bold mb-2"),
+                        html.Label("Deletion Frequency Filter (optional):", className="fw-bold mb-2"),
                         dbc.Row([
                             dbc.Col([
-                                html.Label("Min Distance (bp):", className="small"),
+                                html.Label("Freq(A):", className="small"),
                                 dcc.Input(
-                                    id='scatter-min-distance',
-                                    type='number',
-                                    placeholder='e.g., 1000000',
-                                    className="form-control form-control-sm mb-2",
-                                    debounce=True
-                                )
-                            ], width=6, lg=2),
-                            dbc.Col([
-                                html.Label("Max Distance (bp):", className="small"),
-                                dcc.Input(
-                                    id='scatter-max-distance',
-                                    type='number',
-                                    placeholder='e.g., 50000000',
-                                    className="form-control form-control-sm mb-2",
-                                    debounce=True
-                                )
-                            ], width=6, lg=2),
-                            dbc.Col([
-                                html.Label("Min P(B|A):", className="small"),
-                                dcc.Input(
-                                    id='scatter-min-pba',
+                                    id='scatter-freq-a',
                                     type='number',
                                     min=0,
                                     max=1,
                                     step=0.01,
-                                    placeholder='0-1',
+                                    placeholder='0-1 (e.g., 0.5)',
                                     className="form-control form-control-sm mb-2",
                                     debounce=True
                                 )
-                            ], width=6, lg=2),
-                            dbc.Col([
-                                html.Label("Max P(B|A):", className="small"),
-                                dcc.Input(
-                                    id='scatter-max-pba',
-                                    type='number',
-                                    min=0,
-                                    max=1,
-                                    step=0.01,
-                                    placeholder='0-1',
-                                    className="form-control form-control-sm mb-2",
-                                    debounce=True
-                                )
-                            ], width=6, lg=2),
-                            dbc.Col([
-                                html.Label("Min Freq(A):", className="small"),
-                                dcc.Input(
-                                    id='scatter-min-freq-a',
-                                    type='number',
-                                    min=0,
-                                    max=1,
-                                    step=0.01,
-                                    placeholder='0-1',
-                                    className="form-control form-control-sm mb-2",
-                                    debounce=True
-                                )
-                            ], width=6, lg=2),
-                            dbc.Col([
-                                html.Label("Max Freq(A):", className="small"),
-                                dcc.Input(
-                                    id='scatter-max-freq-a',
-                                    type='number',
-                                    min=0,
-                                    max=1,
-                                    step=0.01,
-                                    placeholder='0-1',
-                                    className="form-control form-control-sm mb-2",
-                                    debounce=True
-                                )
-                            ], width=6, lg=2)
+                            ], width=12, lg=3)
                         ], className="mb-3"),
                         dcc.Loading(
                             id="loading-distance-scatter",

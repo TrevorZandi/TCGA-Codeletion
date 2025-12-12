@@ -744,68 +744,62 @@ def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_dis
                 
                 distance_bp = abs(pos_i - pos_j)
                 
-                # Apply distance filters
-                if distance_bp < min_distance:
-                    continue
-                if max_distance is not None and distance_bp > max_distance:
-                    continue
-                
                 # Add data point for P(gene_j | gene_i) if non-zero
                 # When gene_i is "A", we want P(B|A) which is P(gene_j | gene_i)
                 if not pd.isna(prob_j_given_i) and prob_j_given_i > 0:
-                    # Apply P(B|A) filters
-                    if min_pba is not None and prob_j_given_i < min_pba:
-                        pass  # Skip this point
-                    elif max_pba is not None and prob_j_given_i > max_pba:
-                        pass  # Skip this point
-                    else:
-                        gene_a_symbol = gene_i.split()[0]
-                        gene_b_symbol = gene_j.split()[0]
-                        # Apply gene filter if specified (filter for gene A)
-                        if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
-                            # Apply deletion frequency filter for gene A
-                            if deletion_freqs is not None:
-                                gene_a_freq = deletion_freqs.get(gene_i, 0)
-                                if min_freq_a is not None and gene_a_freq < min_freq_a:
-                                    continue
-                                if max_freq_a is not None and gene_a_freq > max_freq_a:
-                                    continue
-                            
+                    gene_a_symbol = gene_i.split()[0]
+                    gene_b_symbol = gene_j.split()[0]
+                    # Apply gene filter if specified (filter for gene A)
+                    if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
+                        # Apply deletion frequency filter for gene A
+                        if freq_a is not None and deletion_freqs is not None:
+                            gene_a_freq = deletion_freqs.get(gene_i, 0)
+                            if gene_a_freq < freq_a:
+                                pass  # Skip this point
+                            else:
+                                pairs_data.append({
+                                    'gene_a': gene_i,
+                                    'gene_b': gene_j,
+                                    'distance_bp': distance_bp,
+                                    'conditional_prob': prob_j_given_i,
+                                    'direction': f"{gene_b_symbol} | {gene_a_symbol}"
+                                })
+                        else:
                             pairs_data.append({
                                 'gene_a': gene_i,
                                 'gene_b': gene_j,
                                 'distance_bp': distance_bp,
-                                'conditional_prob': prob_j_given_i,  # P(B|A) = P(gene_j | gene_i)
-                                'direction': f"{gene_b_symbol} | {gene_a_symbol}"  # Display as B|A
+                                'conditional_prob': prob_j_given_i,
+                                'direction': f"{gene_b_symbol} | {gene_a_symbol}"
                             })
                 
                 # Add data point for P(gene_i | gene_j) if non-zero
                 # When gene_j is "A", we want P(B|A) which is P(gene_i | gene_j)
                 if not pd.isna(prob_i_given_j) and prob_i_given_j > 0:
-                    # Apply P(B|A) filters
-                    if min_pba is not None and prob_i_given_j < min_pba:
-                        pass  # Skip this point
-                    elif max_pba is not None and prob_i_given_j > max_pba:
-                        pass  # Skip this point
-                    else:
-                        gene_a_symbol = gene_j.split()[0]
-                        gene_b_symbol = gene_i.split()[0]
-                        # Apply gene filter if specified (filter for gene A)
-                        if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
-                            # Apply deletion frequency filter for gene A
-                            if deletion_freqs is not None:
-                                gene_a_freq = deletion_freqs.get(gene_j, 0)
-                                if min_freq_a is not None and gene_a_freq < min_freq_a:
-                                    continue
-                                if max_freq_a is not None and gene_a_freq > max_freq_a:
-                                    continue
-                            
+                    gene_a_symbol = gene_j.split()[0]
+                    gene_b_symbol = gene_i.split()[0]
+                    # Apply gene filter if specified (filter for gene A)
+                    if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
+                        # Apply deletion frequency filter for gene A
+                        if freq_a is not None and deletion_freqs is not None:
+                            gene_a_freq = deletion_freqs.get(gene_j, 0)
+                            if gene_a_freq < freq_a:
+                                pass  # Skip this point
+                            else:
+                                pairs_data.append({
+                                    'gene_a': gene_j,
+                                    'gene_b': gene_i,
+                                    'distance_bp': distance_bp,
+                                    'conditional_prob': prob_i_given_j,
+                                    'direction': f"{gene_b_symbol} | {gene_a_symbol}"
+                                })
+                        else:
                             pairs_data.append({
                                 'gene_a': gene_j,
                                 'gene_b': gene_i,
                                 'distance_bp': distance_bp,
-                                'conditional_prob': prob_i_given_j,  # P(B|A) = P(gene_i | gene_j)
-                                'direction': f"{gene_b_symbol} | {gene_a_symbol}"  # Display as B|A
+                                'conditional_prob': prob_i_given_j,
+                                'direction': f"{gene_b_symbol} | {gene_a_symbol}"
                             })
     
     if not pairs_data:

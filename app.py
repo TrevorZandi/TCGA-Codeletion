@@ -261,17 +261,10 @@ def update_top_pairs(n_pairs, study_id, chromosome, gene_search,
         Input('study-dropdown', 'value'),
         Input('chromosome-dropdown', 'value'),
         Input('distance-scatter-gene-filter', 'value'),
-        Input('scatter-min-distance', 'value'),
-        Input('scatter-max-distance', 'value'),
-        Input('scatter-min-pba', 'value'),
-        Input('scatter-max-pba', 'value'),
-        Input('scatter-min-freq-a', 'value'),
-        Input('scatter-max-freq-a', 'value')
+        Input('scatter-freq-a', 'value')
     ]
 )
-def update_distance_scatter(study_id, chromosome, gene_filter,
-                           min_distance, max_distance, min_pba, max_pba,
-                           min_freq_a, max_freq_a):
+def update_distance_scatter(study_id, chromosome, gene_filter, freq_a):
     """
     Update the distance vs conditional probability scatter plot.
     
@@ -318,12 +311,7 @@ def update_distance_scatter(study_id, chromosome, gene_filter,
         gene_metadata=gene_metadata,
         deletion_freqs=deletion_freqs,
         gene_filter=gene_filter if gene_filter and gene_filter.strip() else None,
-        min_distance=min_distance if min_distance else 0,
-        max_distance=max_distance,
-        min_pba=min_pba,
-        max_pba=max_pba,
-        min_freq_a=min_freq_a,
-        max_freq_a=max_freq_a
+        freq_a=freq_a
     )
     
     return fig
