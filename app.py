@@ -114,11 +114,11 @@ def populate_study_dropdown(_):
     [
         Input('colorscale-dropdown', 'value'),
         Input('n-labels-slider', 'value'),
-        Input('study-dropdown', 'value')
+        Input('study-dropdown', 'value'),
+        Input('chromosome-dropdown', 'value')
     ]
 )
-def update_heatmap(colorscale, n_labels, study_id):
-    chromosome = '13'  # Default to chromosome 13
+def update_heatmap(colorscale, n_labels, study_id, chromosome):
     """
     Update the heatmap visualization based on user selections.
     
@@ -180,11 +180,11 @@ def update_heatmap(colorscale, n_labels, study_id):
     [
         Input('n-pairs-slider', 'value'),
         Input('study-dropdown', 'value'),
+        Input('chromosome-dropdown', 'value'),
         Input('gene-search-input', 'value')
     ]
 )
-def update_top_pairs(n_pairs, study_id, gene_search):
-    chromosome = '13'  # Default to chromosome 13
+def update_top_pairs(n_pairs, study_id, chromosome, gene_search):
     """
     Update the top pairs table based on selected number of pairs and optional gene search.
     
@@ -246,11 +246,11 @@ def update_top_pairs(n_pairs, study_id, gene_search):
     Output('distance-frequency-scatter', 'figure'),
     [
         Input('study-dropdown', 'value'),
+        Input('chromosome-dropdown', 'value'),
         Input('distance-scatter-gene-filter', 'value')
     ]
 )
-def update_distance_scatter(study_id, gene_filter):
-    chromosome = '13'  # Default to chromosome 13
+def update_distance_scatter(study_id, chromosome, gene_filter):
     """
     Update the distance vs conditional probability scatter plot.
     
@@ -299,11 +299,11 @@ def update_distance_scatter(study_id, gene_filter):
 @app.callback(
     Output('deletion-frequency-scatter', 'figure'),
     [
-        Input('study-dropdown', 'value')
+        Input('study-dropdown', 'value'),
+        Input('chromosome-dropdown', 'value')
     ]
 )
-def update_deletion_scatter(study_id):
-    chromosome = '13'  # Default to chromosome 13
+def update_deletion_scatter(study_id, chromosome):
     """
     Update the deletion frequency scatter plot for the selected study.
     
@@ -352,11 +352,11 @@ def update_deletion_scatter(study_id):
 @app.callback(
     Output('stats-display', 'children'),
     [
-        Input('study-dropdown', 'value')
+        Input('study-dropdown', 'value'),
+        Input('chromosome-dropdown', 'value')
     ]
 )
-def update_stats(study_id):
-    chromosome = '13'  # Default to chromosome 13
+def update_stats(study_id, chromosome):
     """
     Update the statistics display with dataset information.
     

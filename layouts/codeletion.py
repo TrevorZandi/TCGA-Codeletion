@@ -52,6 +52,20 @@ def create_codeletion_layout():
                             className="mb-3"
                         ),
                         
+                        # Chromosome selector
+                        html.Label("Chromosome:", className="fw-bold"),
+                        dcc.Dropdown(
+                            id='chromosome-dropdown',
+                            options=[
+                                *[{'label': f'Chromosome {i}', 'value': str(i)} for i in range(1, 23)],
+                                {'label': 'Chromosome X', 'value': 'X'},
+                                {'label': 'Chromosome Y', 'value': 'Y'}
+                            ],
+                            value='13',  # Default to chr13
+                            clearable=False,
+                            className="mb-3"
+                        ),
+                        
                         # Colorscale selector
                         html.Label("Colorscale:", className="fw-bold"),
                         dcc.Dropdown(
