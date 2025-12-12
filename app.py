@@ -241,6 +241,58 @@ def update_top_pairs(n_pairs, study_id, chromosome, gene_search):
     return table_data
 
 
+# Callback: Update distance-frequency scatter plot
+@app.callback(
+    Output('distance-frequency-scatter', 'figure'),
+    [
+        Input('study-dropdown', 'value'),
+        Input('chromosome-dropdown', 'value')
+    ]
+)
+def update_distance_scatter(study_id, chromosome):
+    """
+    Update the distance vs conditional probability scatter plot.
+    
+    Args:
+        study_id: Selected study identifier
+        chromosome: Chromosome identifier
+        
+    Returns:
+        Updated Plotly figure
+    """
+    # Handle None or empty study_id
+    if study_id is None or study_id == 'none':
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No data available",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(size=16)
+        )
+        return fig
+    
+    # Load conditional matrix
+    conditional_matrix = processed_loader.load_conditional_matrix(
+        chromosome=chromosome,
+        study_id=study_id
+    )
+    
+    # Load gene metadata with positions
+    gene_metadata = processed_loader.load_gene_metadata(
+        chromosome=chromosome,
+        study_id=study_id
+    )
+    
+    # Create scatter plot
+    fig = codeletion_heatmap.create_distance_frequency_scatter(
+        conditional_matrix=conditional_matrix,
+        gene_metadata=gene_metadata,
+        chromosome=chromosome
+    )
+    
+    return fig
+
+
 # Callback: Update deletion frequency scatter plot
 @app.callback(
     Output('deletion-frequency-scatter', 'figure'),

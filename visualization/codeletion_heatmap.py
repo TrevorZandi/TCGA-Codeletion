@@ -640,3 +640,190 @@ def plot_deletion_frequency_scatter(deletion_freqs, gene_metadata=None, output_p
         fig.write_html(output_path)
     
     return fig
+
+
+def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_distance=0):
+    """
+    Create a scatter plot showing relationship between genomic distance and conditional co-deletion probability.
+    
+    Plots Distance (bp) vs P(B|A) for all gene pairs where both metrics are available.
+    Excludes pairs where P(B|A) = 0 to reduce dataset size and focus on actual co-deletions.
+    
+    Args:
+        conditional_matrix: DataFrame where entry [i,j] represents P(gene_i deleted | gene_j deleted)
+        gene_metadata: DataFrame with gene positions (entrezGeneId, hugoGeneSymbol, start, end)
+        min_distance: Minimum distance in bp to include (default: 0, can filter out very close genes)
+        
+    Returns:
+        Plotly Figure object
+    """
+    # Create gene position lookup
+    gene_positions = {}
+    if gene_metadata is not None and 'start' in gene_metadata.columns:
+        for _, row in gene_metadata.iterrows():
+            symbol = row['hugoGeneSymbol']
+            entrez = int(row['entrezGeneId'])
+            gene_key = f"{symbol} ({entrez})"
+            gene_positions[gene_key] = {
+                'start': int(row['start']),
+                'end': int(row['end'])
+            }
+    
+    if not gene_positions:
+        # Return empty figure with message
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No genomic position data available",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(size=16)
+        )
+        return fig
+    
+    # Extract gene pairs with both distance and conditional probability
+    pairs_data = []
+    genes = conditional_matrix.columns.tolist()
+    
+    for i in range(len(genes)):
+        for j in range(i+1, len(genes)):  # Upper triangle only to avoid duplicates
+            gene_i = genes[i]
+            gene_j = genes[j]
+            
+            # Get conditional probabilities (both directions)
+            prob_i_given_j = conditional_matrix.iloc[i, j]
+            prob_j_given_i = conditional_matrix.iloc[j, i]
+            
+            # Skip if both are NaN or both are 0
+            if (pd.isna(prob_i_given_j) or prob_i_given_j == 0) and \
+               (pd.isna(prob_j_given_i) or prob_j_given_i == 0):
+                continue
+            
+            # Calculate genomic distance
+            if gene_i in gene_positions and gene_j in gene_positions:
+                pos_i = gene_positions[gene_i]['start']
+                pos_j = gene_positions[gene_j]['start']
+                
+                # Skip if either position is 0 (no coordinate data)
+                if pos_i == 0 or pos_j == 0:
+                    continue
+                
+                distance_bp = abs(pos_i - pos_j)
+                
+                # Apply minimum distance filter
+                if distance_bp < min_distance:
+                    continue
+                
+                # Add data point for P(i|j) if non-zero
+                if not pd.isna(prob_i_given_j) and prob_i_given_j > 0:
+                    pairs_data.append({
+                        'gene_a': gene_i,
+                        'gene_b': gene_j,
+                        'distance_bp': distance_bp,
+                        'conditional_prob': prob_i_given_j,
+                        'direction': f"{gene_i.split()[0]} | {gene_j.split()[0]}"
+                    })
+                
+                # Add data point for P(j|i) if non-zero
+                if not pd.isna(prob_j_given_i) and prob_j_given_i > 0:
+                    pairs_data.append({
+                        'gene_a': gene_j,
+                        'gene_b': gene_i,
+                        'distance_bp': distance_bp,
+                        'conditional_prob': prob_j_given_i,
+                        'direction': f"{gene_j.split()[0]} | {gene_i.split()[0]}"
+                    })
+    
+    if not pairs_data:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No data points with both distance and non-zero conditional probability",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(size=16)
+        )
+        return fig
+    
+    # Convert to DataFrame
+    pairs_df = pd.DataFrame(pairs_data)
+    
+    # Create scatter plot
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=pairs_df['distance_bp'],
+        y=pairs_df['conditional_prob'],
+        mode='markers',
+        marker=dict(
+            size=4,
+            color=pairs_df['conditional_prob'],
+            colorscale='Viridis',
+            showscale=True,
+            colorbar=dict(title='P(B|A)'),
+            opacity=0.6,
+            line=dict(width=0.5, color='white')
+        ),
+        text=pairs_df['direction'],
+        hovertemplate='<b>%{text}</b><br>' +
+                      'Distance: %{x:,.0f} bp<br>' +
+                      'P(B|A): %{y:.3f}<br>' +
+                      '<extra></extra>'
+    ))
+    
+    # Update layout
+    fig.update_layout(
+        title=dict(
+            text="Genomic Distance vs Conditional Co-deletion Probability",
+            x=0.5,
+            xanchor='center',
+            font=dict(size=16)
+        ),
+        xaxis=dict(
+            title="Genomic Distance (bp)",
+            type='log',  # Log scale often better for genomic distances
+            tickformat='.0f'
+        ),
+        yaxis=dict(
+            title="Conditional Probability P(B|A)",
+            range=[0, 1]
+        ),
+        height=600,
+        width=900,
+        plot_bgcolor='white',
+        hovermode='closest',
+        showlegend=False
+    )
+    
+    # Add annotation with data point count
+    fig.add_annotation(
+        text=f"n = {len(pairs_df):,} gene pairs (P(B|A) > 0)",
+        xref="paper", yref="paper",
+        x=0.02, y=0.98,
+        showarrow=False,
+        font=dict(size=12),
+        bgcolor="rgba(255,255,255,0.8)",
+        bordercolor="black",
+        borderwidth=1
+    )
+    
+    return fig
+
+
+def plot_distance_frequency_scatter(conditional_matrix, gene_metadata, min_distance=0, output_path=None):
+    """
+    Create and save a scatter plot of genomic distance vs conditional probability (for standalone use).
+    
+    Args:
+        conditional_matrix: DataFrame where entry [i,j] represents P(gene_i deleted | gene_j deleted)
+        gene_metadata: DataFrame with gene positions
+        min_distance: Minimum distance in bp to include (default: 0)
+        output_path: Optional path to save the figure as HTML
+        
+    Returns:
+        Plotly Figure object
+    """
+    fig = create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_distance)
+    
+    if output_path:
+        fig.write_html(output_path)
+    
+    return fig

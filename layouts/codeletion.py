@@ -205,6 +205,34 @@ def create_codeletion_layout():
             ], width=12)
         ], className="mb-4"),
         
+        # Distance vs Frequency scatter plot
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader(html.H5("Genomic Distance vs Co-deletion Probability")),
+                    dbc.CardBody([
+                        html.P(
+                            "This scatter plot shows the relationship between physical distance "
+                            "and conditional co-deletion probability P(B|A). Each point represents "
+                            "a gene pair where P(B|A) > 0. The x-axis uses a logarithmic scale.",
+                            className="text-muted small mb-3"
+                        ),
+                        dcc.Loading(
+                            id="loading-distance-scatter",
+                            type="default",
+                            children=dcc.Graph(
+                                id='distance-frequency-scatter',
+                                config={
+                                    'displayModeBar': True,
+                                    'displaylogo': False
+                                }
+                            )
+                        )
+                    ])
+                ])
+            ], width=12)
+        ], className="mb-4"),
+        
         # Footer
         dbc.Row([
             dbc.Col([
