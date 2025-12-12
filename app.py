@@ -181,10 +181,17 @@ def update_heatmap(colorscale, n_labels, study_id, chromosome):
         Input('n-pairs-slider', 'value'),
         Input('study-dropdown', 'value'),
         Input('chromosome-dropdown', 'value'),
-        Input('gene-search-input', 'value')
+        Input('gene-search-input', 'value'),
+        Input('table-min-distance', 'value'),
+        Input('table-max-distance', 'value'),
+        Input('table-min-freq', 'value'),
+        Input('table-min-pab', 'value'),
+        Input('table-min-pba', 'value'),
+        Input('table-min-joint', 'value')
     ]
 )
-def update_top_pairs(n_pairs, study_id, chromosome, gene_search):
+def update_top_pairs(n_pairs, study_id, chromosome, gene_search, 
+                    min_distance, max_distance, min_freq, min_pab, min_pba, min_joint):
     """
     Update the top pairs table based on selected number of pairs and optional gene search.
     
@@ -235,7 +242,13 @@ def update_top_pairs(n_pairs, study_id, chromosome, gene_search):
         joint_data=joint_data,
         gene_metadata=gene_metadata,
         n=n_pairs,
-        gene_filter=gene_search
+        gene_filter=gene_search,
+        min_distance=min_distance,
+        max_distance=max_distance,
+        min_freq=min_freq,
+        min_pab=min_pab,
+        min_pba=min_pba,
+        min_joint=min_joint
     )
     
     return table_data
@@ -247,10 +260,15 @@ def update_top_pairs(n_pairs, study_id, chromosome, gene_search):
     [
         Input('study-dropdown', 'value'),
         Input('chromosome-dropdown', 'value'),
-        Input('distance-scatter-gene-filter', 'value')
+        Input('distance-scatter-gene-filter', 'value'),
+        Input('scatter-min-distance', 'value'),
+        Input('scatter-max-distance', 'value'),
+        Input('scatter-min-pba', 'value'),
+        Input('scatter-max-pba', 'value')
     ]
 )
-def update_distance_scatter(study_id, chromosome, gene_filter):
+def update_distance_scatter(study_id, chromosome, gene_filter,
+                           min_distance, max_distance, min_pba, max_pba):
     """
     Update the distance vs conditional probability scatter plot.
     
@@ -289,7 +307,11 @@ def update_distance_scatter(study_id, chromosome, gene_filter):
     fig = codeletion_heatmap.create_distance_frequency_scatter(
         conditional_matrix=conditional_matrix,
         gene_metadata=gene_metadata,
-        gene_filter=gene_filter if gene_filter and gene_filter.strip() else None
+        gene_filter=gene_filter if gene_filter and gene_filter.strip() else None,
+        min_distance=min_distance if min_distance else 0,
+        max_distance=max_distance,
+        min_pba=min_pba,
+        max_pba=max_pba
     )
     
     return fig

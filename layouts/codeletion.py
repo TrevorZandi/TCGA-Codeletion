@@ -195,6 +195,83 @@ def create_codeletion_layout():
                                 )
                             ], width=12, lg=6)
                         ]),
+                        # Numerical filters
+                        html.Hr(),
+                        html.Label("Numerical Filters (optional):", className="fw-bold mb-2"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Min Distance (bp):", className="small"),
+                                dcc.Input(
+                                    id='table-min-distance',
+                                    type='number',
+                                    placeholder='e.g., 1000000',
+                                    className="form-control form-control-sm mb-2",
+                                    debounce=True
+                                )
+                            ], width=6, lg=2),
+                            dbc.Col([
+                                html.Label("Min Freq:", className="small"),
+                                dcc.Input(
+                                    id='table-min-freq',
+                                    type='number',
+                                    min=0,
+                                    max=1,
+                                    step=0.01,
+                                    placeholder='0-1',
+                                    className="form-control form-control-sm mb-2",
+                                    debounce=True
+                                )
+                            ], width=6, lg=2),
+                            dbc.Col([
+                                html.Label("Min P(A|B):", className="small"),
+                                dcc.Input(
+                                    id='table-min-pab',
+                                    type='number',
+                                    min=0,
+                                    max=1,
+                                    step=0.01,
+                                    placeholder='0-1',
+                                    className="form-control form-control-sm mb-2",
+                                    debounce=True
+                                )
+                            ], width=6, lg=2),
+                            dbc.Col([
+                                html.Label("Min P(B|A):", className="small"),
+                                dcc.Input(
+                                    id='table-min-pba',
+                                    type='number',
+                                    min=0,
+                                    max=1,
+                                    step=0.01,
+                                    placeholder='0-1',
+                                    className="form-control form-control-sm mb-2",
+                                    debounce=True
+                                )
+                            ], width=6, lg=2),
+                            dbc.Col([
+                                html.Label("Min P(A,B):", className="small"),
+                                dcc.Input(
+                                    id='table-min-joint',
+                                    type='number',
+                                    min=0,
+                                    max=1,
+                                    step=0.01,
+                                    placeholder='0-1',
+                                    className="form-control form-control-sm mb-2",
+                                    debounce=True
+                                )
+                            ], width=6, lg=2),
+                            dbc.Col([
+                                html.Label("Max Distance (bp):", className="small"),
+                                dcc.Input(
+                                    id='table-max-distance',
+                                    type='number',
+                                    placeholder='e.g., 50000000',
+                                    className="form-control form-control-sm mb-2",
+                                    debounce=True
+                                )
+                            ], width=6, lg=2)
+                        ], className="mb-3"),
                         dcc.Loading(
                             id="loading-barplot",
                             type="default",
@@ -234,6 +311,57 @@ def create_codeletion_layout():
                                 )
                             ], width=12, lg=6, className="mb-3")
                         ]),
+                        # Numerical filters for scatter plot
+                        html.Hr(),
+                        html.Label("Numerical Filters (optional):", className="fw-bold mb-2"),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Min Distance (bp):", className="small"),
+                                dcc.Input(
+                                    id='scatter-min-distance',
+                                    type='number',
+                                    placeholder='e.g., 1000000',
+                                    className="form-control form-control-sm mb-2",
+                                    debounce=True
+                                )
+                            ], width=6, lg=2),
+                            dbc.Col([
+                                html.Label("Max Distance (bp):", className="small"),
+                                dcc.Input(
+                                    id='scatter-max-distance',
+                                    type='number',
+                                    placeholder='e.g., 50000000',
+                                    className="form-control form-control-sm mb-2",
+                                    debounce=True
+                                )
+                            ], width=6, lg=2),
+                            dbc.Col([
+                                html.Label("Min P(B|A):", className="small"),
+                                dcc.Input(
+                                    id='scatter-min-pba',
+                                    type='number',
+                                    min=0,
+                                    max=1,
+                                    step=0.01,
+                                    placeholder='0-1',
+                                    className="form-control form-control-sm mb-2",
+                                    debounce=True
+                                )
+                            ], width=6, lg=2),
+                            dbc.Col([
+                                html.Label("Max P(B|A):", className="small"),
+                                dcc.Input(
+                                    id='scatter-max-pba',
+                                    type='number',
+                                    min=0,
+                                    max=1,
+                                    step=0.01,
+                                    placeholder='0-1',
+                                    className="form-control form-control-sm mb-2",
+                                    debounce=True
+                                )
+                            ], width=6, lg=2)
+                        ], className="mb-3"),
                         dcc.Loading(
                             id="loading-distance-scatter",
                             type="default",

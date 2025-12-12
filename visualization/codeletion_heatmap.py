@@ -214,7 +214,8 @@ def plot_top_pairs_barplot(long_table, n=20, output_path=None):
     return fig
 
 
-def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, gene_metadata=None, n=20, gene_filter=None):
+def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, gene_metadata=None, n=20, gene_filter=None,
+                                min_distance=None, max_distance=None, min_freq=None, min_pab=None, min_pba=None, min_joint=None):
     """
     Create a table showing top gene pairs with detailed statistics.
     
@@ -225,6 +226,12 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
         gene_metadata: DataFrame with gene positions (entrezGeneId, hugoGeneSymbol, start, end)
         n: Number of top pairs to display (default: 20)
         gene_filter: Optional gene name to filter results (case-insensitive)
+        min_distance: Minimum genomic distance in bp
+        max_distance: Maximum genomic distance in bp
+        min_freq: Minimum individual deletion frequency (for both genes)
+        min_pab: Minimum P(A|B) value
+        min_pba: Minimum P(B|A) value
+        min_joint: Minimum P(A,B) joint probability
         
     Returns:
         Dash DataTable component
@@ -342,6 +349,26 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
                 className="text-center text-muted p-4"
             )
     
+    # Apply numerical filters
+    if min_distance is not None:
+        pairs_df = pairs_df[pairs_df['Distance (bp)'] >= min_distance]
+    if max_distance is not None:
+        pairs_df = pairs_df[pairs_df['Distance (bp)'] <= max_distance]
+    if min_freq is not None:
+        pairs_df = pairs_df[(pairs_df['Freq A'] >= min_freq) & (pairs_df['Freq B'] >= min_freq)]
+    if min_pab is not None:
+        pairs_df = pairs_df[pairs_df['P(A|B)'] >= min_pab]
+    if min_pba is not None:
+        pairs_df = pairs_df[pairs_df['P(B|A)'] >= min_pba]
+    if min_joint is not None:
+        pairs_df = pairs_df[pairs_df['P(A,B)'] >= min_joint]
+    
+    if pairs_df.empty:
+        return html.Div(
+            "No gene pairs match the specified filters",
+            className="text-center text-muted p-4"
+        )
+    
     # Sort by maximum conditional probability
     pairs_df = pairs_df.sort_values('max_cond', ascending=False)
     
@@ -357,7 +384,7 @@ def create_top_pairs_table_data(conditional_matrix, deletion_freqs, joint_data, 
         columns=[
             {'name': 'Gene A', 'id': 'Gene A', 'type': 'text'},
             {'name': 'Gene B', 'id': 'Gene B', 'type': 'text'},
-            {'name': 'Distance (bp)', 'id': 'Distance (bp)', 'type': 'numeric', 'format': {'specifier': ',.0f'}},
+            {'name': 'Distance (bp)', 'id': 'Distance (bp)', 'type': 'numeric', 'format': {'specifier': '.2e'}},
             {'name': 'Freq Gene A', 'id': 'Freq A', 'type': 'numeric', 'format': {'specifier': '.2%'}},
             {'name': 'Freq Gene B', 'id': 'Freq B', 'type': 'numeric', 'format': {'specifier': '.2%'}},
             {'name': 'P(A|B)', 'id': 'P(A|B)', 'type': 'numeric', 'format': {'specifier': '.2%'}},
@@ -642,7 +669,8 @@ def plot_deletion_frequency_scatter(deletion_freqs, gene_metadata=None, output_p
     return fig
 
 
-def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_distance=0, gene_filter=None):
+def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_distance=0, gene_filter=None,
+                                       max_distance=None, min_pba=None, max_pba=None):
     """
     Create a scatter plot showing relationship between genomic distance and conditional co-deletion probability.
     
@@ -652,8 +680,11 @@ def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_dis
     Args:
         conditional_matrix: DataFrame where entry [i,j] represents P(gene_i deleted | gene_j deleted)
         gene_metadata: DataFrame with gene positions (entrezGeneId, hugoGeneSymbol, start, end)
-        min_distance: Minimum distance in bp to include (default: 0, can filter out very close genes)
+        min_distance: Minimum distance in bp to include (default: 0)
         gene_filter: Optional gene symbol to filter for (shows only pairs where this is gene A)
+        max_distance: Maximum distance in bp to include
+        min_pba: Minimum P(B|A) value to include
+        max_pba: Maximum P(B|A) value to include
         
     Returns:
         Plotly Figure object
@@ -713,39 +744,53 @@ def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_dis
                 
                 distance_bp = abs(pos_i - pos_j)
                 
-                # Apply minimum distance filter
+                # Apply distance filters
                 if distance_bp < min_distance:
+                    continue
+                if max_distance is not None and distance_bp > max_distance:
                     continue
                 
                 # Add data point for P(gene_j | gene_i) if non-zero
                 # When gene_i is "A", we want P(B|A) which is P(gene_j | gene_i)
                 if not pd.isna(prob_j_given_i) and prob_j_given_i > 0:
-                    gene_a_symbol = gene_i.split()[0]
-                    gene_b_symbol = gene_j.split()[0]
-                    # Apply gene filter if specified (filter for gene A)
-                    if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
-                        pairs_data.append({
-                            'gene_a': gene_i,
-                            'gene_b': gene_j,
-                            'distance_bp': distance_bp,
-                            'conditional_prob': prob_j_given_i,  # P(B|A) = P(gene_j | gene_i)
-                            'direction': f"{gene_b_symbol} | {gene_a_symbol}"  # Display as B|A
-                        })
+                    # Apply P(B|A) filters
+                    if min_pba is not None and prob_j_given_i < min_pba:
+                        pass  # Skip this point
+                    elif max_pba is not None and prob_j_given_i > max_pba:
+                        pass  # Skip this point
+                    else:
+                        gene_a_symbol = gene_i.split()[0]
+                        gene_b_symbol = gene_j.split()[0]
+                        # Apply gene filter if specified (filter for gene A)
+                        if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
+                            pairs_data.append({
+                                'gene_a': gene_i,
+                                'gene_b': gene_j,
+                                'distance_bp': distance_bp,
+                                'conditional_prob': prob_j_given_i,  # P(B|A) = P(gene_j | gene_i)
+                                'direction': f"{gene_b_symbol} | {gene_a_symbol}"  # Display as B|A
+                            })
                 
                 # Add data point for P(gene_i | gene_j) if non-zero
                 # When gene_j is "A", we want P(B|A) which is P(gene_i | gene_j)
                 if not pd.isna(prob_i_given_j) and prob_i_given_j > 0:
-                    gene_a_symbol = gene_j.split()[0]
-                    gene_b_symbol = gene_i.split()[0]
-                    # Apply gene filter if specified (filter for gene A)
-                    if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
-                        pairs_data.append({
-                            'gene_a': gene_j,
-                            'gene_b': gene_i,
-                            'distance_bp': distance_bp,
-                            'conditional_prob': prob_i_given_j,  # P(B|A) = P(gene_i | gene_j)
-                            'direction': f"{gene_b_symbol} | {gene_a_symbol}"  # Display as B|A
-                        })
+                    # Apply P(B|A) filters
+                    if min_pba is not None and prob_i_given_j < min_pba:
+                        pass  # Skip this point
+                    elif max_pba is not None and prob_i_given_j > max_pba:
+                        pass  # Skip this point
+                    else:
+                        gene_a_symbol = gene_j.split()[0]
+                        gene_b_symbol = gene_i.split()[0]
+                        # Apply gene filter if specified (filter for gene A)
+                        if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
+                            pairs_data.append({
+                                'gene_a': gene_j,
+                                'gene_b': gene_i,
+                                'distance_bp': distance_bp,
+                                'conditional_prob': prob_i_given_j,  # P(B|A) = P(gene_i | gene_j)
+                                'direction': f"{gene_b_symbol} | {gene_a_symbol}"  # Display as B|A
+                            })
     
     if not pairs_data:
         fig = go.Figure()
@@ -778,7 +823,7 @@ def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_dis
         ),
         text=pairs_df['direction'],
         hovertemplate='<b>%{text}</b><br>' +
-                      'Distance: %{x:,.0f} bp<br>' +
+                      'Distance: %{x:.2e} bp<br>' +
                       'P(B|A): %{y:.3f}<br>' +
                       '<extra></extra>'
     ))
