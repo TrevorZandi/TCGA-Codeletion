@@ -217,6 +217,23 @@ def create_codeletion_layout():
                             "a gene pair where P(B|A) > 0. The x-axis uses a logarithmic scale.",
                             className="text-muted small mb-3"
                         ),
+                        # Gene filter for scatter plot
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Filter by Gene A:", className="fw-bold"),
+                                dcc.Input(
+                                    id='distance-scatter-gene-filter',
+                                    type='text',
+                                    placeholder='Enter gene symbol (e.g., TP53, RB1)',
+                                    className='form-control',
+                                    debounce=True
+                                ),
+                                html.Small(
+                                    "Enter a gene symbol to show only pairs where that gene is 'A' in P(B|A)",
+                                    className="text-muted"
+                                )
+                            ], width=12, lg=6, className="mb-3")
+                        ]),
                         dcc.Loading(
                             id="loading-distance-scatter",
                             type="default",

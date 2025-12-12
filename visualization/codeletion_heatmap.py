@@ -642,7 +642,7 @@ def plot_deletion_frequency_scatter(deletion_freqs, gene_metadata=None, output_p
     return fig
 
 
-def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_distance=0):
+def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_distance=0, gene_filter=None):
     """
     Create a scatter plot showing relationship between genomic distance and conditional co-deletion probability.
     
@@ -653,6 +653,7 @@ def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_dis
         conditional_matrix: DataFrame where entry [i,j] represents P(gene_i deleted | gene_j deleted)
         gene_metadata: DataFrame with gene positions (entrezGeneId, hugoGeneSymbol, start, end)
         min_distance: Minimum distance in bp to include (default: 0, can filter out very close genes)
+        gene_filter: Optional gene symbol to filter for (shows only pairs where this is gene A)
         
     Returns:
         Plotly Figure object
@@ -715,23 +716,29 @@ def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_dis
                 
                 # Add data point for P(i|j) if non-zero
                 if not pd.isna(prob_i_given_j) and prob_i_given_j > 0:
-                    pairs_data.append({
-                        'gene_a': gene_i,
-                        'gene_b': gene_j,
-                        'distance_bp': distance_bp,
-                        'conditional_prob': prob_i_given_j,
-                        'direction': f"{gene_i.split()[0]} | {gene_j.split()[0]}"
-                    })
+                    gene_a_symbol = gene_i.split()[0]
+                    # Apply gene filter if specified
+                    if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
+                        pairs_data.append({
+                            'gene_a': gene_i,
+                            'gene_b': gene_j,
+                            'distance_bp': distance_bp,
+                            'conditional_prob': prob_i_given_j,
+                            'direction': f"{gene_a_symbol} | {gene_j.split()[0]}"
+                        })
                 
                 # Add data point for P(j|i) if non-zero
                 if not pd.isna(prob_j_given_i) and prob_j_given_i > 0:
-                    pairs_data.append({
-                        'gene_a': gene_j,
-                        'gene_b': gene_i,
-                        'distance_bp': distance_bp,
-                        'conditional_prob': prob_j_given_i,
-                        'direction': f"{gene_j.split()[0]} | {gene_i.split()[0]}"
-                    })
+                    gene_a_symbol = gene_j.split()[0]
+                    # Apply gene filter if specified
+                    if gene_filter is None or gene_a_symbol.upper() == gene_filter.upper():
+                        pairs_data.append({
+                            'gene_a': gene_j,
+                            'gene_b': gene_i,
+                            'distance_bp': distance_bp,
+                            'conditional_prob': prob_j_given_i,
+                            'direction': f"{gene_a_symbol} | {gene_i.split()[0]}"
+                        })
     
     if not pairs_data:
         fig = go.Figure()

@@ -246,16 +246,18 @@ def update_top_pairs(n_pairs, study_id, chromosome, gene_search):
     Output('distance-frequency-scatter', 'figure'),
     [
         Input('study-dropdown', 'value'),
-        Input('chromosome-dropdown', 'value')
+        Input('chromosome-dropdown', 'value'),
+        Input('distance-scatter-gene-filter', 'value')
     ]
 )
-def update_distance_scatter(study_id, chromosome):
+def update_distance_scatter(study_id, chromosome, gene_filter):
     """
     Update the distance vs conditional probability scatter plot.
     
     Args:
         study_id: Selected study identifier
         chromosome: Chromosome identifier
+        gene_filter: Optional gene symbol to filter results
         
     Returns:
         Updated Plotly figure
@@ -283,11 +285,11 @@ def update_distance_scatter(study_id, chromosome):
         study_id=study_id
     )
     
-    # Create scatter plot
+    # Create scatter plot with gene filter
     fig = codeletion_heatmap.create_distance_frequency_scatter(
         conditional_matrix=conditional_matrix,
         gene_metadata=gene_metadata,
-        chromosome=chromosome
+        gene_filter=gene_filter if gene_filter and gene_filter.strip() else None
     )
     
     return fig
