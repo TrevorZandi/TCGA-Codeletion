@@ -97,20 +97,36 @@ def get_chromosome_genes(chromosome, genome="hg19", refresh=False):
         refresh: Force refresh from API
         
     Returns:
-        DataFrame with entrezGeneId, hugoGeneSymbol, cytoband, start, end columns
+        DataFrame with entrezGeneId, hugoGeneSymbol, chromosome, cytoband, start, end columns
     """
     genes = client.get_genes_by_genome(genome, refresh=refresh)
     
     # Filter by chromosome
     chr_genes = [g for g in genes if g.get("chromosome") == str(chromosome)]
     
-    # Build DataFrame with genomic positions
-    df = pd.DataFrame(chr_genes)[["entrezGeneId", "hugoGeneSymbol", "cytoband", "start", "end"]]
+    # Build DataFrame with basic info from cBioPortal
+    df = pd.DataFrame(chr_genes)[["entrezGeneId", "hugoGeneSymbol", "cytoband"]]
     df = df.drop_duplicates("entrezGeneId")
+    df['chromosome'] = str(chromosome)  # Add chromosome column
+    
+    # Fetch detailed gene information from NCBI to get actual genomic coordinates
+    entrez_ids = df['entrezGeneId'].tolist()
+    detailed_genes = client.get_genes_detailed(entrez_ids, refresh=refresh)
+    
+    # Create lookup for start/end positions
+    position_lookup = {
+        g['entrezGeneId']: {'start': g.get('start', 0), 'end': g.get('end', 0)}
+        for g in detailed_genes
+    }
+    
+    # Add start/end columns
+    df['start'] = df['entrezGeneId'].map(lambda x: position_lookup.get(x, {}).get('start', 0))
+    df['end'] = df['entrezGeneId'].map(lambda x: position_lookup.get(x, {}).get('end', 0))
     
     # Sort by chromosomal position using start position
     df = df.sort_values("start").reset_index(drop=True)
     
+    return df[['entrezGeneId', 'hugoGeneSymbol', 'chromosome', 'cytoband', 'start', 'end']]
     return df
 
 

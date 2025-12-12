@@ -122,6 +122,108 @@ def get_genes_by_genome(genome="hg19", refresh=False):
     return genes
 
 
+def get_genes_detailed(entrez_ids, refresh=False):
+    """
+    Fetch detailed gene information including genomic coordinates.
+    
+    Args:
+        entrez_ids: List of Entrez gene IDs
+        refresh: Force refresh from API
+        
+    Returns:
+        List of detailed gene dicts with start/end positions
+    """
+    import hashlib
+    
+    # Create cache key based on gene IDs
+def get_genes_detailed(entrez_ids, refresh=False):
+    """
+    Get detailed gene information including genomic positions from NCBI E-utilities.
+    cBioPortal API doesn't provide actual genomic coordinates (returns 0 for all genes),
+    so we fetch from NCBI E-utilities which has real position data.
+    
+    Args:
+        entrez_ids: List of Entrez Gene IDs
+        refresh: Whether to bypass cache
+        
+    Returns:
+        List of gene dictionaries with genomic positions
+    """
+    import hashlib
+    import time
+    
+    # Create cache key
+    gene_ids_str = ",".join(map(str, sorted(entrez_ids)))
+    gene_hash = hashlib.md5(gene_ids_str.encode()).hexdigest()[:8]
+    cache_file = f"genes_ncbi_detailed_{gene_hash}.pkl"
+    
+    if not refresh:
+        cached = load_from_cache(cache_file)
+        if cached is not None:
+            return cached
+    
+    # Batch requests to NCBI (max 200 IDs per request to be safe)
+    batch_size = 200
+    all_genes = {}
+    
+    for i in range(0, len(entrez_ids), batch_size):
+        batch = entrez_ids[i:i + batch_size]
+        batch_str = ','.join(str(gid) for gid in batch)
+        
+        # NCBI E-utilities API
+        url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi'
+        params = {
+            'db': 'gene',
+            'id': batch_str,
+            'retmode': 'json'
+        }
+        
+        r = requests.get(url, params=params)
+        r.raise_for_status()
+        
+        data = r.json()
+        if 'result' in data:
+            for gid_str, gene_data in data['result'].items():
+                if gid_str == 'uids':  # Skip metadata field
+                    continue
+                    
+                # Extract genomic coordinates
+                start = 0
+                end = 0
+                chromosome = gene_data.get('chromosome', '')
+                
+                if 'genomicinfo' in gene_data and gene_data['genomicinfo']:
+                    gi = gene_data['genomicinfo'][0]
+                    start = gi.get('chrstart', 0)
+                    end = gi.get('chrstop', 0)
+                
+                all_genes[int(gid_str)] = {
+                    'entrezGeneId': int(gid_str),
+                    'hugoGeneSymbol': gene_data.get('name', ''),
+                    'chromosome': chromosome,
+                    'start': start,
+                    'end': end,
+                    'cytoband': gene_data.get('maplocation', '')  # Use map location as cytoband approximation
+                }
+        
+        # NCBI recommends max 3 requests per second
+        if i + batch_size < len(entrez_ids):
+            time.sleep(0.34)
+    
+    # Convert to list maintaining order of input
+    result = [all_genes.get(gid, {
+        'entrezGeneId': gid,
+        'hugoGeneSymbol': '',
+        'chromosome': '',
+        'start': 0,
+        'end': 0,
+        'cytoband': ''
+    }) for gid in entrez_ids]
+    
+    save_to_cache(result, cache_file)
+    return result
+
+
 def fetch_discrete_copy_number(molecular_profile_id, sample_list_id, entrez_ids, refresh=False):
     """
     Fetch discrete copy number alterations.
