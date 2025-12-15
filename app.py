@@ -38,7 +38,7 @@ def get_study_display_name(study_id):
         study_id: Study identifier (e.g., 'brca_tcga_pan_can_atlas_2018')
         
     Returns:
-        Human-readable name (e.g., 'Breast Invasive Carcinoma (TCGA, PanCancer Atlas)')
+        Human-readable name (e.g., 'Breast Invasive Carcinoma')
     """
     try:
         from data.cbioportal_client import get_studies
@@ -49,7 +49,10 @@ def get_study_display_name(study_id):
         # Find matching study
         for study in studies:
             if study.get('studyId') == study_id:
-                return study.get('name', study_id)
+                name = study.get('name', study_id)
+                # Remove (TCGA, PanCancer Atlas) suffix
+                name = name.replace('(TCGA, PanCancer Atlas)', '').strip()
+                return name
         
         # Fallback to formatted study_id if not found
         return study_id.replace('_', ' ').replace('tcga', 'TCGA').replace('pan can atlas', 'PanCanAtlas').title()

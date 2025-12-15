@@ -103,7 +103,7 @@ def create_deletion_freq_tab():
             dbc.Card([
                 dbc.CardHeader(html.H5("Visualization Controls")),
                 dbc.CardBody([
-                    html.Label("TCGA Study:", className="fw-bold"),
+                    html.Label("TCGA, PanCancer Atlas Study:", className="fw-bold"),
                     dcc.Dropdown(
                         id='deletion-study-dropdown',
                         options=[],
@@ -177,7 +177,7 @@ def create_heatmap_tab():
             dbc.Card([
                 dbc.CardHeader(html.H5("Visualization Controls")),
                 dbc.CardBody([
-                    html.Label("TCGA Study:", className="fw-bold"),
+                    html.Label("TCGA, PanCancer Atlas Study:", className="fw-bold"),
                     dcc.Dropdown(
                         id='heatmap-study-dropdown',
                         options=[],
@@ -264,7 +264,7 @@ def create_gene_pairs_tab():
             dbc.Card([
                 dbc.CardHeader(html.H5("Visualization Controls")),
                 dbc.CardBody([
-                    html.Label("TCGA Study:", className="fw-bold"),
+                    html.Label("TCGA, PanCancer Atlas Study:", className="fw-bold"),
                     dcc.Dropdown(
                         id='pairs-study-dropdown',
                         options=[],
@@ -393,7 +393,7 @@ def create_distance_scatter_tab():
             dbc.Card([
                 dbc.CardHeader(html.H5("Visualization Controls")),
                 dbc.CardBody([
-                    html.Label("TCGA Study:", className="fw-bold"),
+                    html.Label("TCGA, PanCancer Atlas Study:", className="fw-bold"),
                     dcc.Dropdown(
                         id='scatter-study-dropdown',
                         options=[],
