@@ -1,8 +1,8 @@
 """
-Co-deletion explorer page layout.
+Co-deletion explorer page layout with tabbed interface.
 
 This module contains the layout for the interactive co-deletion analysis page,
-moved from the original layout.py.
+with separate tabs for each main visualization type.
 """
 
 from dash import dcc, html
@@ -11,7 +11,7 @@ import dash_bootstrap_components as dbc
 
 def create_codeletion_layout():
     """
-    Create the co-deletion explorer layout.
+    Create the co-deletion explorer layout with tabs for each visualization.
     
     Returns:
         Dash layout component for the co-deletion page
@@ -36,321 +36,26 @@ def create_codeletion_layout():
             ])
         ]),
         
-        # Controls section
+        # Tabs for different visualizations
         dbc.Row([
             dbc.Col([
-                dbc.Card([
-                    dbc.CardHeader(html.H5("Visualization Controls")),
-                    dbc.CardBody([
-                        # Study selector
-                        html.Label("TCGA Study:", className="fw-bold"),
-                        dcc.Dropdown(
-                            id='study-dropdown',
-                            options=[],  # Will be populated by callback
-                            value=None,  # Will be set by callback
-                            clearable=False,
-                            className="mb-3"
-                        ),
-                        
-                        # Chromosome selector
-                        html.Label("Chromosome:", className="fw-bold"),
-                        dcc.Dropdown(
-                            id='chromosome-dropdown',
-                            options=[
-                                *[{'label': f'Chromosome {i}', 'value': str(i)} for i in range(1, 23)],
-                                {'label': 'Chromosome X', 'value': 'X'},
-                                {'label': 'Chromosome Y', 'value': 'Y'}
-                            ],
-                            value='13',  # Default to chr13
-                            clearable=False,
-                            className="mb-3"
-                        ),
-                        
-                        # Colorscale selector
-                        html.Label("Colorscale:", className="fw-bold"),
-                        dcc.Dropdown(
-                            id='colorscale-dropdown',
-                            options=[
-                                {'label': 'Viridis', 'value': 'Viridis'},
-                                {'label': 'YlOrRd (Yellow-Orange-Red)', 'value': 'YlOrRd'},
-                                {'label': 'Blues', 'value': 'Blues'},
-                                {'label': 'Reds', 'value': 'Reds'},
-                                {'label': 'RdBu (Red-Blue)', 'value': 'RdBu'},
-                                {'label': 'Plasma', 'value': 'Plasma'},
-                            ],
-                            value='Viridis',
-                            clearable=False,
-                            className="mb-3"
-                        ),
-                        
-                        # Number of labels slider
-                        html.Label("Number of axis labels:", className="fw-bold"),
-                        dcc.Slider(
-                            id='n-labels-slider',
-                            min=5,
-                            max=50,
-                            step=5,
-                            value=20,
-                            marks={i: str(i) for i in range(5, 51, 5)},
-                            tooltip={"placement": "bottom", "always_visible": True}
-                        ),
-                    ])
-                ], className="mb-4")
-            ], width=12, lg=3),
-            
-            # Stats section
-            dbc.Col([
-                dbc.Card([
-                    dbc.CardHeader(html.H5("Dataset Statistics")),
-                    dbc.CardBody([
-                        html.Div(id='stats-display', children=[
-                            html.P("Loading dataset information...", className="text-muted")
-                        ])
-                    ])
-                ], className="mb-4")
-            ], width=12, lg=9)
+                dbc.Tabs([
+                    dbc.Tab(label="Individual Gene Deletions", tab_id="tab-deletion-freq"),
+                    dbc.Tab(label="Co-Deletion Heatmap", tab_id="tab-heatmap"),
+                    dbc.Tab(label="Top Gene Pairs", tab_id="tab-gene-pairs"),
+                    dbc.Tab(label="Distance vs Probability", tab_id="tab-distance-scatter"),
+                ], id="visualization-tabs", active_tab="tab-heatmap", className="mb-4")
+            ])
         ]),
         
-        # Individual gene deletion frequencies
-        dbc.Row([
-            dbc.Col([
-                dbc.Card([
-                    dbc.CardHeader(html.H5("Individual Gene Deletion Frequencies")),
-                    dbc.CardBody([
-                        dcc.Loading(
-                            id="loading-deletion-scatter",
-                            type="default",
-                            children=dcc.Graph(
-                                id='deletion-frequency-scatter',
-                                config={
-                                    'displayModeBar': True,
-                                    'displaylogo': False
-                                }
-                            )
-                        )
-                    ])
-                ])
-            ], width=12)
-        ], className="mb-4"),
-        
-        # Main heatmap
-        dbc.Row([
-            dbc.Col([
-                dbc.Card([
-                    dbc.CardHeader(html.H5("Conditional Co-Deletion Heatmap")),
-                    dbc.CardBody([
-                        dcc.Loading(
-                            id="loading-heatmap",
-                            type="default",
-                            children=dcc.Graph(
-                                id='codeletion-heatmap',
-                                config={
-                                    'displayModeBar': True,
-                                    'displaylogo': False,
-                                    'toImageButtonOptions': {
-                                        'format': 'png',
-                                        'filename': 'chr13_codeletion_heatmap',
-                                        'height': 1200,
-                                        'width': 1200,
-                                        'scale': 2
-                                    }
-                                }
-                            )
-                        )
-                    ])
-                ])
-            ], width=12)
-        ], className="mb-4"),
-        
-        # Additional visualizations section
-        dbc.Row([
-            dbc.Col([
-                dbc.Card([
-                    dbc.CardHeader(html.H5("Top Co-deleted Gene Pairs")),
-                    dbc.CardBody([
-                        dbc.Row([
-                            dbc.Col([
-                                # Gene search bar
-                                html.Label("Search for specific gene:", className="fw-bold mb-2"),
-                                dcc.Input(
-                                    id='gene-search-input',
-                                    type='text',
-                                    placeholder='Enter gene name (e.g., TP53, RB1)...',
-                                    className="form-control mb-3",
-                                    debounce=True
-                                )
-                            ], width=12, lg=6),
-                            dbc.Col([
-                                # Number of top pairs selector
-                                html.Label("Number of top pairs to display:", className="fw-bold mb-2"),
-                                dcc.Slider(
-                                    id='n-pairs-slider',
-                                    min=10,
-                                    max=50,
-                                    step=5,
-                                    value=20,
-                                    marks={i: str(i) for i in range(10, 51, 10)},
-                                    tooltip={"placement": "bottom", "always_visible": True},
-                                    className="mb-3"
-                                )
-                            ], width=12, lg=6)
-                        ]),
-                        # Numerical filters
-                        html.Hr(),
-                        html.Label("Numerical Filters (optional):", className="fw-bold mb-2"),
-                        dbc.Row([
-                            dbc.Col([
-                                html.Label("Min Distance (bp):", className="small"),
-                                dcc.Input(
-                                    id='table-min-distance',
-                                    type='number',
-                                    placeholder='e.g., 1000000',
-                                    className="form-control form-control-sm mb-2",
-                                    debounce=True
-                                )
-                            ], width=6, lg=2),
-                            dbc.Col([
-                                html.Label("Min Freq:", className="small"),
-                                dcc.Input(
-                                    id='table-min-freq',
-                                    type='number',
-                                    min=0,
-                                    max=1,
-                                    step=0.01,
-                                    placeholder='0-1',
-                                    className="form-control form-control-sm mb-2",
-                                    debounce=True
-                                )
-                            ], width=6, lg=2),
-                            dbc.Col([
-                                html.Label("Min P(A|B):", className="small"),
-                                dcc.Input(
-                                    id='table-min-pab',
-                                    type='number',
-                                    min=0,
-                                    max=1,
-                                    step=0.01,
-                                    placeholder='0-1',
-                                    className="form-control form-control-sm mb-2",
-                                    debounce=True
-                                )
-                            ], width=6, lg=2),
-                            dbc.Col([
-                                html.Label("Min P(B|A):", className="small"),
-                                dcc.Input(
-                                    id='table-min-pba',
-                                    type='number',
-                                    min=0,
-                                    max=1,
-                                    step=0.01,
-                                    placeholder='0-1',
-                                    className="form-control form-control-sm mb-2",
-                                    debounce=True
-                                )
-                            ], width=6, lg=2),
-                            dbc.Col([
-                                html.Label("Min P(A,B):", className="small"),
-                                dcc.Input(
-                                    id='table-min-joint',
-                                    type='number',
-                                    min=0,
-                                    max=1,
-                                    step=0.01,
-                                    placeholder='0-1',
-                                    className="form-control form-control-sm mb-2",
-                                    debounce=True
-                                )
-                            ], width=6, lg=2),
-                            dbc.Col([
-                                html.Label("Max Distance (bp):", className="small"),
-                                dcc.Input(
-                                    id='table-max-distance',
-                                    type='number',
-                                    placeholder='e.g., 50000000',
-                                    className="form-control form-control-sm mb-2",
-                                    debounce=True
-                                )
-                            ], width=6, lg=2)
-                        ], className="mb-3"),
-                        dcc.Loading(
-                            id="loading-barplot",
-                            type="default",
-                            children=html.Div(id='top-pairs-table')
-                        )
-                    ])
-                ])
-            ], width=12)
-        ], className="mb-4"),
-        
-        # Distance vs Frequency scatter plot
-        dbc.Row([
-            dbc.Col([
-                dbc.Card([
-                    dbc.CardHeader(html.H5("Genomic Distance vs Co-deletion Probability")),
-                    dbc.CardBody([
-                        html.P(
-                            "This scatter plot shows the relationship between physical distance "
-                            "and conditional co-deletion probability P(B|A). Each point represents "
-                            "a gene pair where P(B|A) > 0. The x-axis uses a logarithmic scale.",
-                            className="text-muted small mb-3"
-                        ),
-                        # Gene filter for scatter plot
-                        dbc.Row([
-                            dbc.Col([
-                                html.Label("Filter by Gene A:", className="fw-bold"),
-                                dcc.Input(
-                                    id='distance-scatter-gene-filter',
-                                    type='text',
-                                    placeholder='Enter gene symbol (e.g., TP53, RB1)',
-                                    className='form-control',
-                                    debounce=True
-                                ),
-                                html.Small(
-                                    "Enter a gene symbol to show only pairs where that gene is 'A' in P(B|A)",
-                                    className="text-muted"
-                                )
-                            ], width=12, lg=6, className="mb-3")
-                        ]),
-                        # Deletion frequency filter for scatter plot
-                        html.Hr(),
-                        html.Label("Deletion Frequency Filter (optional):", className="fw-bold mb-2"),
-                        dbc.Row([
-                            dbc.Col([
-                                html.Label("Freq(A):", className="small"),
-                                dcc.Input(
-                                    id='scatter-freq-a',
-                                    type='number',
-                                    min=0,
-                                    max=1,
-                                    step=0.01,
-                                    placeholder='0-1 (e.g., 0.5)',
-                                    className="form-control form-control-sm mb-2",
-                                    debounce=True
-                                )
-                            ], width=12, lg=3)
-                        ], className="mb-3"),
-                        dcc.Loading(
-                            id="loading-distance-scatter",
-                            type="default",
-                            children=dcc.Graph(
-                                id='distance-frequency-scatter',
-                                config={
-                                    'displayModeBar': True,
-                                    'displaylogo': False
-                                }
-                            )
-                        )
-                    ])
-                ])
-            ], width=12)
-        ], className="mb-4"),
+        # Tab content
+        html.Div(id="tab-content"),
         
         # Footer
         dbc.Row([
             dbc.Col([
                 html.Hr(),
                 html.Div(
-                    id='codeletion-footer-info',
                     children=[
                         html.P(
                             [
@@ -388,6 +93,426 @@ def create_codeletion_layout():
     ], fluid=True, style={'maxWidth': '1400px'})
     
     return layout
+
+
+def create_deletion_freq_tab():
+    """Create the Individual Gene Deletion Frequencies tab content."""
+    return dbc.Row([
+        # Controls
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H5("Visualization Controls")),
+                dbc.CardBody([
+                    html.Label("TCGA Study:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='deletion-study-dropdown',
+                        options=[],
+                        value=None,
+                        clearable=False,
+                        className="mb-3"
+                    ),
+                    html.Label("Chromosome:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='deletion-chromosome-dropdown',
+                        options=[
+                            *[{'label': f'Chromosome {i}', 'value': str(i)} for i in range(1, 23)],
+                            {'label': 'Chromosome X', 'value': 'X'},
+                            {'label': 'Chromosome Y', 'value': 'Y'}
+                        ],
+                        value='13',
+                        clearable=False,
+                        className="mb-3"
+                    ),
+                    html.Label("Filter by Gene:", className="fw-bold"),
+                    dcc.Input(
+                        id='deletion-gene-filter',
+                        type='text',
+                        placeholder='Enter gene symbol (optional)',
+                        className="form-control mb-3",
+                        debounce=True
+                    ),
+                    html.Label("Min Deletion Frequency:", className="fw-bold"),
+                    dcc.Input(
+                        id='deletion-min-freq',
+                        type='number',
+                        min=0,
+                        max=1,
+                        step=0.01,
+                        placeholder='0-1',
+                        className="form-control mb-3",
+                        debounce=True
+                    ),
+                ])
+            ], className="mb-4")
+        ], width=12, lg=3),
+        
+        # Visualization
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H5("Individual Gene Deletion Frequencies")),
+                dbc.CardBody([
+                    html.Div(id='deletion-stats-display', className="mb-3"),
+                    dcc.Loading(
+                        id="loading-deletion-scatter",
+                        type="default",
+                        children=dcc.Graph(
+                            id='deletion-frequency-scatter',
+                            config={
+                                'displayModeBar': True,
+                                'displaylogo': False
+                            }
+                        )
+                    )
+                ])
+            ])
+        ], width=12, lg=9)
+    ])
+
+
+def create_heatmap_tab():
+    """Create the Co-Deletion Heatmap tab content."""
+    return dbc.Row([
+        # Controls
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H5("Visualization Controls")),
+                dbc.CardBody([
+                    html.Label("TCGA Study:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='heatmap-study-dropdown',
+                        options=[],
+                        value=None,
+                        clearable=False,
+                        className="mb-3"
+                    ),
+                    html.Label("Chromosome:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='heatmap-chromosome-dropdown',
+                        options=[
+                            *[{'label': f'Chromosome {i}', 'value': str(i)} for i in range(1, 23)],
+                            {'label': 'Chromosome X', 'value': 'X'},
+                            {'label': 'Chromosome Y', 'value': 'Y'}
+                        ],
+                        value='13',
+                        clearable=False,
+                        className="mb-3"
+                    ),
+                    html.Label("Colorscale:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='heatmap-colorscale-dropdown',
+                        options=[
+                            {'label': 'Viridis', 'value': 'Viridis'},
+                            {'label': 'YlOrRd (Yellow-Orange-Red)', 'value': 'YlOrRd'},
+                            {'label': 'Blues', 'value': 'Blues'},
+                            {'label': 'Reds', 'value': 'Reds'},
+                            {'label': 'RdBu (Red-Blue)', 'value': 'RdBu'},
+                            {'label': 'Plasma', 'value': 'Plasma'},
+                        ],
+                        value='Viridis',
+                        clearable=False,
+                        className="mb-3"
+                    ),
+                    html.Label("Number of axis labels:", className="fw-bold"),
+                    dcc.Slider(
+                        id='heatmap-n-labels-slider',
+                        min=5,
+                        max=50,
+                        step=5,
+                        value=20,
+                        marks={i: str(i) for i in range(5, 51, 5)},
+                        tooltip={"placement": "bottom", "always_visible": True}
+                    ),
+                ])
+            ], className="mb-4")
+        ], width=12, lg=3),
+        
+        # Visualization
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H5("Conditional Co-Deletion Heatmap")),
+                dbc.CardBody([
+                    html.Div(id='heatmap-stats-display', className="mb-3"),
+                    dcc.Loading(
+                        id="loading-heatmap",
+                        type="default",
+                        children=dcc.Graph(
+                            id='codeletion-heatmap',
+                            config={
+                                'displayModeBar': True,
+                                'displaylogo': False,
+                                'toImageButtonOptions': {
+                                    'format': 'png',
+                                    'filename': 'chr13_codeletion_heatmap',
+                                    'height': 1200,
+                                    'width': 1200,
+                                    'scale': 2
+                                }
+                            }
+                        )
+                    )
+                ])
+            ])
+        ], width=12, lg=9)
+    ])
+
+
+def create_gene_pairs_tab():
+    """Create the Top Gene Pairs tab content."""
+    return dbc.Row([
+        # Controls
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H5("Visualization Controls")),
+                dbc.CardBody([
+                    html.Label("TCGA Study:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='pairs-study-dropdown',
+                        options=[],
+                        value=None,
+                        clearable=False,
+                        className="mb-3"
+                    ),
+                    html.Label("Chromosome:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='pairs-chromosome-dropdown',
+                        options=[
+                            *[{'label': f'Chromosome {i}', 'value': str(i)} for i in range(1, 23)],
+                            {'label': 'Chromosome X', 'value': 'X'},
+                            {'label': 'Chromosome Y', 'value': 'Y'}
+                        ],
+                        value='13',
+                        clearable=False,
+                        className="mb-3"
+                    ),
+                    html.Label("Search for specific gene:", className="fw-bold"),
+                    dcc.Input(
+                        id='pairs-gene-search-input',
+                        type='text',
+                        placeholder='Enter gene name...',
+                        className="form-control mb-3",
+                        debounce=True
+                    ),
+                    html.Label("Number of top pairs:", className="fw-bold"),
+                    dcc.Slider(
+                        id='pairs-n-pairs-slider',
+                        min=10,
+                        max=50,
+                        step=5,
+                        value=20,
+                        marks={i: str(i) for i in range(10, 51, 10)},
+                        tooltip={"placement": "bottom", "always_visible": True},
+                        className="mb-3"
+                    ),
+                    html.Hr(),
+                    html.Label("Filters:", className="fw-bold"),
+                    html.Label("Min Distance (bp):", className="small"),
+                    dcc.Input(
+                        id='pairs-min-distance',
+                        type='number',
+                        placeholder='e.g., 1000000',
+                        className="form-control form-control-sm mb-2",
+                        debounce=True
+                    ),
+                    html.Label("Max Distance (bp):", className="small"),
+                    dcc.Input(
+                        id='pairs-max-distance',
+                        type='number',
+                        placeholder='e.g., 50000000',
+                        className="form-control form-control-sm mb-2",
+                        debounce=True
+                    ),
+                    html.Label("Min Freq:", className="small"),
+                    dcc.Input(
+                        id='pairs-min-freq',
+                        type='number',
+                        min=0,
+                        max=1,
+                        step=0.01,
+                        placeholder='0-1',
+                        className="form-control form-control-sm mb-2",
+                        debounce=True
+                    ),
+                    html.Label("Min P(A|B):", className="small"),
+                    dcc.Input(
+                        id='pairs-min-pab',
+                        type='number',
+                        min=0,
+                        max=1,
+                        step=0.01,
+                        placeholder='0-1',
+                        className="form-control form-control-sm mb-2",
+                        debounce=True
+                    ),
+                    html.Label("Min P(B|A):", className="small"),
+                    dcc.Input(
+                        id='pairs-min-pba',
+                        type='number',
+                        min=0,
+                        max=1,
+                        step=0.01,
+                        placeholder='0-1',
+                        className="form-control form-control-sm mb-2",
+                        debounce=True
+                    ),
+                    html.Label("Min P(A,B):", className="small"),
+                    dcc.Input(
+                        id='pairs-min-joint',
+                        type='number',
+                        min=0,
+                        max=1,
+                        step=0.01,
+                        placeholder='0-1',
+                        className="form-control form-control-sm mb-2",
+                        debounce=True
+                    ),
+                ])
+            ], className="mb-4")
+        ], width=12, lg=3),
+        
+        # Visualization
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H5("Top Co-deleted Gene Pairs")),
+                dbc.CardBody([
+                    dcc.Loading(
+                        id="loading-pairs-table",
+                        type="default",
+                        children=html.Div(id='top-pairs-table')
+                    )
+                ])
+            ])
+        ], width=12, lg=9)
+    ])
+
+
+def create_distance_scatter_tab():
+    """Create the Distance vs Probability tab content."""
+    return dbc.Row([
+        # Controls
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H5("Visualization Controls")),
+                dbc.CardBody([
+                    html.Label("TCGA Study:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='scatter-study-dropdown',
+                        options=[],
+                        value=None,
+                        clearable=False,
+                        className="mb-3"
+                    ),
+                    html.Label("Chromosome:", className="fw-bold"),
+                    dcc.Dropdown(
+                        id='scatter-chromosome-dropdown',
+                        options=[
+                            *[{'label': f'Chromosome {i}', 'value': str(i)} for i in range(1, 23)],
+                            {'label': 'Chromosome X', 'value': 'X'},
+                            {'label': 'Chromosome Y', 'value': 'Y'}
+                        ],
+                        value='13',
+                        clearable=False,
+                        className="mb-3"
+                    ),
+                    html.Label("Filter by Gene A:", className="fw-bold"),
+                    dcc.Input(
+                        id='scatter-gene-filter',
+                        type='text',
+                        placeholder='Enter gene symbol...',
+                        className='form-control mb-3',
+                        debounce=True
+                    ),
+                    html.Hr(),
+                    html.Label("Filters:", className="fw-bold"),
+                    html.Label("Min Freq(A):", className="small"),
+                    dcc.Input(
+                        id='scatter-min-freq-a',
+                        type='number',
+                        min=0,
+                        max=1,
+                        step=0.01,
+                        placeholder='0-1',
+                        className="form-control form-control-sm mb-2",
+                        debounce=True
+                    ),
+                    html.Label("Max Freq(A):", className="small"),
+                    dcc.Input(
+                        id='scatter-max-freq-a',
+                        type='number',
+                        min=0,
+                        max=1,
+                        step=0.01,
+                        placeholder='0-1',
+                        className="form-control form-control-sm mb-2",
+                        debounce=True
+                    ),
+                    html.Label("Min Distance (bp):", className="small"),
+                    dcc.Input(
+                        id='scatter-min-distance',
+                        type='number',
+                        placeholder='e.g., 1000000',
+                        className="form-control form-control-sm mb-2",
+                        debounce=True
+                    ),
+                    html.Label("Max Distance (bp):", className="small"),
+                    dcc.Input(
+                        id='scatter-max-distance',
+                        type='number',
+                        placeholder='e.g., 50000000',
+                        className="form-control form-control-sm mb-2",
+                        debounce=True
+                    ),
+                    html.Label("Min P(B|A):", className="small"),
+                    dcc.Input(
+                        id='scatter-min-pba',
+                        type='number',
+                        min=0,
+                        max=1,
+                        step=0.01,
+                        placeholder='0-1',
+                        className="form-control form-control-sm mb-2",
+                        debounce=True
+                    ),
+                    html.Label("Max P(B|A):", className="small"),
+                    dcc.Input(
+                        id='scatter-max-pba',
+                        type='number',
+                        min=0,
+                        max=1,
+                        step=0.01,
+                        placeholder='0-1',
+                        className="form-control form-control-sm mb-2",
+                        debounce=True
+                    ),
+                ])
+            ], className="mb-4")
+        ], width=12, lg=3),
+        
+        # Visualization
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H5("Genomic Distance vs Co-deletion Probability")),
+                dbc.CardBody([
+                    html.P(
+                        "This scatter plot shows the relationship between physical distance "
+                        "and conditional co-deletion probability P(B|A). Each point represents "
+                        "a gene pair where P(B|A) > 0. The x-axis uses a logarithmic scale.",
+                        className="text-muted small mb-3"
+                    ),
+                    dcc.Loading(
+                        id="loading-distance-scatter",
+                        type="default",
+                        children=dcc.Graph(
+                            id='distance-frequency-scatter',
+                            config={
+                                'displayModeBar': True,
+                                'displaylogo': False
+                            }
+                        )
+                    )
+                ])
+            ])
+        ], width=12, lg=9)
+    ])
 
 
 def create_stats_display(n_genes, n_genes_with_deletions, max_deletion_pct, chromosome="13"):
