@@ -252,8 +252,17 @@ def update_deletion_stats(study_id, chromosome):
     )
     
     n_genes = len(deletion_freqs)
-    n_genes_with_deletions = sum(1 for freq in deletion_freqs.values() if freq > 0)
-    max_deletion_pct = round(max(deletion_freqs.values()) * 100, 1) if deletion_freqs else 0
+    # Handle both dict and Series/array types
+    if hasattr(deletion_freqs, 'values'):
+        if callable(deletion_freqs.values):
+            freq_values = deletion_freqs.values()
+        else:
+            freq_values = deletion_freqs.values
+    else:
+        freq_values = deletion_freqs
+    
+    n_genes_with_deletions = sum(1 for freq in freq_values if freq > 0)
+    max_deletion_pct = round(max(freq_values) * 100, 1) if len(freq_values) > 0 else 0
     
     return create_stats_display(n_genes, n_genes_with_deletions, max_deletion_pct, chromosome)
 
@@ -314,10 +323,10 @@ def update_heatmap(colorscale, n_labels, study_id, chromosome):
     )
     
     fig = codeletion_heatmap.create_heatmap_figure(
-        conditional_matrix=conditional_matrix,
-        gene_metadata=gene_metadata,
+        mat=conditional_matrix,
         colorscale=colorscale,
-        n_labels=n_labels
+        n_labels=n_labels,
+        cytobands=gene_metadata
     )
     
     return fig
@@ -342,8 +351,17 @@ def update_heatmap_stats(study_id, chromosome):
     )
     
     n_genes = len(deletion_freqs)
-    n_genes_with_deletions = sum(1 for freq in deletion_freqs.values() if freq > 0)
-    max_deletion_pct = round(max(deletion_freqs.values()) * 100, 1) if deletion_freqs else 0
+    # Handle both dict and Series/array types
+    if hasattr(deletion_freqs, 'values'):
+        if callable(deletion_freqs.values):
+            freq_values = deletion_freqs.values()
+        else:
+            freq_values = deletion_freqs.values
+    else:
+        freq_values = deletion_freqs
+    
+    n_genes_with_deletions = sum(1 for freq in freq_values if freq > 0)
+    max_deletion_pct = round(max(freq_values) * 100, 1) if len(freq_values) > 0 else 0
     
     return create_stats_display(n_genes, n_genes_with_deletions, max_deletion_pct, chromosome)
 
