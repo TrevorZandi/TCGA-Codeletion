@@ -429,7 +429,7 @@ def update_top_pairs_table(n_pairs, study_id, chromosome, gene_filter,
         study_id=study_id
     )
     
-    joint_data = processed_loader.load_codeletion_matrix(
+    joint_data = processed_loader.load_codeletion_pairs(
         chromosome=chromosome,
         study_id=study_id
     )
