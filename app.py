@@ -325,11 +325,16 @@ def update_heatmap(colorscale, n_labels, study_id, chromosome):
         study_id=study_id
     )
     
+    # Extract gene labels from metadata DataFrame
+    gene_labels = None
+    if gene_metadata is not None and not gene_metadata.empty:
+        gene_labels = gene_metadata['hugoGeneSymbol'].tolist()
+    
     fig = codeletion_heatmap.create_heatmap_figure(
         mat=conditional_matrix,
         colorscale=colorscale,
         n_labels=n_labels,
-        cytobands=gene_metadata
+        cytobands=gene_labels
     )
     
     return fig
