@@ -669,8 +669,8 @@ def plot_deletion_frequency_scatter(deletion_freqs, gene_metadata=None, output_p
     return fig
 
 
-def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_distance=0, gene_filter=None,
-                                       max_distance=None, min_pba=None, max_pba=None):
+def create_distance_frequency_scatter(conditional_matrix, gene_metadata, gene_filter=None,
+                                       deletion_freqs=None, freq_a=None):
     """
     Create a scatter plot showing relationship between genomic distance and conditional co-deletion probability.
     
@@ -680,11 +680,9 @@ def create_distance_frequency_scatter(conditional_matrix, gene_metadata, min_dis
     Args:
         conditional_matrix: DataFrame where entry [i,j] represents P(gene_i deleted | gene_j deleted)
         gene_metadata: DataFrame with gene positions (entrezGeneId, hugoGeneSymbol, start, end)
-        min_distance: Minimum distance in bp to include (default: 0)
         gene_filter: Optional gene symbol to filter for (shows only pairs where this is gene A)
-        max_distance: Maximum distance in bp to include
-        min_pba: Minimum P(B|A) value to include
-        max_pba: Maximum P(B|A) value to include
+        deletion_freqs: Optional Series with deletion frequencies for each gene
+        freq_a: Deletion frequency threshold for gene A (filters to genes with freq >= this value)
         
     Returns:
         Plotly Figure object
