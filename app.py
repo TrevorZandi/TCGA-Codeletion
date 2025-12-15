@@ -26,6 +26,59 @@ from data import processed_loader
 from visualization import codeletion_heatmap
 
 
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+def get_study_display_name(study_id):
+    """
+    Get human-readable study name from cBioPortal API.
+    
+    Args:
+        study_id: Study identifier (e.g., 'brca_tcga_pan_can_atlas_2018')
+        
+    Returns:
+        Human-readable name (e.g., 'Breast Invasive Carcinoma (TCGA, PanCancer Atlas)')
+    """
+    try:
+        from data.cbioportal_client import get_studies
+        
+        # Fetch all studies (cached)
+        studies = get_studies()
+        
+        # Find matching study
+        for study in studies:
+            if study.get('studyId') == study_id:
+                return study.get('name', study_id)
+        
+        # Fallback to formatted study_id if not found
+        return study_id.replace('_', ' ').replace('tcga', 'TCGA').replace('pan can atlas', 'PanCanAtlas').title()
+    except Exception as e:
+        # Fallback on error
+        return study_id.replace('_', ' ').replace('tcga', 'TCGA').replace('pan can atlas', 'PanCanAtlas').title()
+
+
+def get_study_options_with_names(available_studies):
+    """
+    Create dropdown options with human-readable study names.
+    
+    Args:
+        available_studies: List of study IDs
+        
+    Returns:
+        List of {'label': human_name, 'value': study_id} dicts
+    """
+    options = []
+    for study_id in available_studies:
+        display_name = get_study_display_name(study_id)
+        options.append({'label': display_name, 'value': study_id})
+    
+    # Sort by label for better UX
+    options.sort(key=lambda x: x['label'])
+    
+    return options
+
+
 # Initialize Dash app with multi-page support
 app = Dash(
     __name__,
@@ -134,12 +187,12 @@ def populate_deletion_study_dropdown(_):
     if not available_studies:
         return [{'label': 'No studies processed yet', 'value': 'none'}], 'none'
     
-    options = []
-    for study_id in available_studies:
-        display_name = study_id.replace('_', ' ').replace('tcga', 'TCGA').replace('pan can atlas', 'PanCanAtlas').title()
-        options.append({'label': display_name, 'value': study_id})
+    options = get_study_options_with_names(available_studies)
     
-    return options, available_studies[0]
+    # Default to first alphabetically (by display name)
+    default_value = options[0]['value'] if options else available_studies[0]
+    
+    return options, default_value
 
 
 # Callback: Update deletion frequency scatter plot
@@ -222,12 +275,10 @@ def populate_heatmap_study_dropdown(_):
     if not available_studies:
         return [{'label': 'No studies processed yet', 'value': 'none'}], 'none'
     
-    options = []
-    for study_id in available_studies:
-        display_name = study_id.replace('_', ' ').replace('tcga', 'TCGA').replace('pan can atlas', 'PanCanAtlas').title()
-        options.append({'label': display_name, 'value': study_id})
+    options = get_study_options_with_names(available_studies)
+    default_value = options[0]['value'] if options else available_studies[0]
     
-    return options, available_studies[0]
+    return options, default_value
 
 
 # Callback: Update heatmap
@@ -314,12 +365,10 @@ def populate_pairs_study_dropdown(_):
     if not available_studies:
         return [{'label': 'No studies processed yet', 'value': 'none'}], 'none'
     
-    options = []
-    for study_id in available_studies:
-        display_name = study_id.replace('_', ' ').replace('tcga', 'TCGA').replace('pan can atlas', 'PanCanAtlas').title()
-        options.append({'label': display_name, 'value': study_id})
+    options = get_study_options_with_names(available_studies)
+    default_value = options[0]['value'] if options else available_studies[0]
     
-    return options, available_studies[0]
+    return options, default_value
 
 
 # Callback: Update top pairs table
@@ -399,12 +448,10 @@ def populate_scatter_study_dropdown(_):
     if not available_studies:
         return [{'label': 'No studies processed yet', 'value': 'none'}], 'none'
     
-    options = []
-    for study_id in available_studies:
-        display_name = study_id.replace('_', ' ').replace('tcga', 'TCGA').replace('pan can atlas', 'PanCanAtlas').title()
-        options.append({'label': display_name, 'value': study_id})
+    options = get_study_options_with_names(available_studies)
+    default_value = options[0]['value'] if options else available_studies[0]
     
-    return options, available_studies[0]
+    return options, default_value
 
 
 # Callback: Update distance-frequency scatter plot
@@ -478,9 +525,7 @@ def populate_summary_study_dropdown(_):
         return [{'label': 'All Studies', 'value': 'all'}]
     
     options = [{'label': 'All Studies', 'value': 'all'}]
-    for study_id in available_studies:
-        display_name = study_id.replace('_', ' ').replace('tcga', 'TCGA').replace('pan can atlas', 'PanCanAtlas').title()
-        options.append({'label': display_name, 'value': study_id})
+    options.extend(get_study_options_with_names(available_studies))
     
     return options
 
