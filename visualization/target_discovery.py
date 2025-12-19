@@ -175,13 +175,13 @@ def create_gi_score_scatter(
     fig = px.scatter(
         opportunities_df,
         x='deletion_frequency',
-        y=opportunities_df['gi_score'].abs(),
+        y='gi_score',
         color=color_values,
         size='deletion_frequency',
         color_discrete_map=color_discrete_map,
         labels={
             'deletion_frequency': 'Deletion Frequency',
-            'y': 'Absolute GI Score'
+            'gi_score': 'GI Score'
         }
     )
     
@@ -192,7 +192,7 @@ def create_gi_score_scatter(
     fig.update_layout(
         title='Therapeutic Opportunities: Deletion Frequency vs Synthetic Lethality Strength',
         xaxis_title='Deletion Frequency',
-        yaxis_title='Absolute Genetic Interaction Score',
+        yaxis_title='GI Score',
         legend_title=legend_title,
         hovermode='closest',
         height=600,
