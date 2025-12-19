@@ -282,7 +282,6 @@ def join_deletion_with_synthetic_lethality(
         - fdr: False discovery rate
         - target_is_common_essential: BAGEL2 flag for target
         - target_depmap_dependent_lines: Number of lines dependent on target
-        - therapeutic_score: Calculated opportunity score
         - hit_count: Number of cell lines validated (if hit_frequency_df provided)
         - cancer_types_validated: Cancer types where validated
     """
@@ -325,16 +324,6 @@ def join_deletion_with_synthetic_lethality(
         if not a_deletions.empty:
             del_freq_a = a_deletions.iloc[0]['deletion_frequency']
             
-            hit_freq = sl_row.get('hit_fraction', None)
-            
-            score = calculate_therapeutic_score(
-                del_freq=del_freq_a,
-                gi_score=sl_row['mean_norm_gi'],
-                is_essential_bagel2=bool(sl_row['targetB__is_common_essential_bagel2']),
-                depmap_dependent_count=sl_row['targetB_depmap_count'],
-                hit_frequency=hit_freq
-            )
-            
             opp = {
                 'deleted_gene': gene_a,
                 'target_gene': gene_b,
@@ -342,8 +331,7 @@ def join_deletion_with_synthetic_lethality(
                 'gi_score': sl_row['mean_norm_gi'],
                 'fdr': sl_row['fdr'],
                 'target_is_common_essential': bool(sl_row['targetB__is_common_essential_bagel2']),
-                'target_depmap_dependent_lines': sl_row['targetB_depmap_count'],
-                'therapeutic_score': score
+                'target_depmap_dependent_lines': sl_row['targetB_depmap_count']
             }
             
             if hit_frequency_df is not None:
@@ -358,16 +346,6 @@ def join_deletion_with_synthetic_lethality(
         if not b_deletions.empty:
             del_freq_b = b_deletions.iloc[0]['deletion_frequency']
             
-            hit_freq = sl_row.get('hit_fraction', None)
-            
-            score = calculate_therapeutic_score(
-                del_freq=del_freq_b,
-                gi_score=sl_row['mean_norm_gi'],
-                is_essential_bagel2=bool(sl_row['targetA__is_common_essential_bagel2']),
-                depmap_dependent_count=sl_row['targetA_depmap_count'],
-                hit_frequency=hit_freq
-            )
-            
             opp = {
                 'deleted_gene': gene_b,
                 'target_gene': gene_a,
@@ -375,8 +353,7 @@ def join_deletion_with_synthetic_lethality(
                 'gi_score': sl_row['mean_norm_gi'],
                 'fdr': sl_row['fdr'],
                 'target_is_common_essential': bool(sl_row['targetA__is_common_essential_bagel2']),
-                'target_depmap_dependent_lines': sl_row['targetA_depmap_count'],
-                'therapeutic_score': score
+                'target_depmap_dependent_lines': sl_row['targetA_depmap_count']
             }
             
             if hit_frequency_df is not None:
@@ -388,9 +365,12 @@ def join_deletion_with_synthetic_lethality(
     
     result_df = pd.DataFrame(opportunities)
     
-    # Sort by therapeutic score
+    # Sort by deletion frequency (descending), then by absolute GI score (descending)
     if not result_df.empty:
-        result_df = result_df.sort_values('therapeutic_score', ascending=False).reset_index(drop=True)
+        result_df = result_df.sort_values(
+            ['deletion_frequency', 'gi_score'],
+            ascending=[False, True]  # True for gi_score because it's negative (more negative = stronger)
+        ).reset_index(drop=True)
     
     return result_df
 
@@ -449,6 +429,6 @@ def compare_across_studies(
     
     if all_opportunities:
         result = pd.concat(all_opportunities, ignore_index=True)
-        return result.sort_values('therapeutic_score', ascending=False)
+        return result.sort_values(['deletion_frequency', 'gi_score'], ascending=[False, True])
     else:
         return pd.DataFrame()

@@ -45,8 +45,6 @@ def create_target_ranking_table(
          'format': {'specifier': '.1%'}},
         {'name': 'GI Score', 'id': 'gi_score', 'type': 'numeric', 
          'format': {'specifier': '.3f'}},
-        {'name': 'Therapeutic Score', 'id': 'therapeutic_score', 'type': 'numeric', 
-         'format': {'specifier': '.3f'}},
         {'name': 'Essential', 'id': 'target_is_common_essential', 'type': 'text',
          'presentation': 'markdown'},
         {'name': 'DepMap Lines', 'id': 'target_depmap_dependent_lines', 'type': 'numeric'},
@@ -101,10 +99,6 @@ def create_target_ranking_table(
                 'backgroundColor': '#d4edda',
                 'color': '#155724',
                 'fontWeight': 'bold'
-            },
-            {
-                'if': {'column_id': 'therapeutic_score'},
-                'fontWeight': 'bold'
             }
         ]
     )
@@ -118,7 +112,7 @@ def create_target_ranking_table(
     ])
 
 
-def create_therapeutic_score_scatter(
+def create_gi_score_scatter(
     opportunities_df: pd.DataFrame,
     color_by: str = 'target_is_common_essential'
 ) -> go.Figure:
@@ -148,7 +142,6 @@ def create_therapeutic_score_scatter(
         text = f"<b>{row['deleted_gene']} deleted → target {row['target_gene']}</b><br>"
         text += f"Deletion: {row['deletion_frequency']:.1%}<br>"
         text += f"GI Score: {row['gi_score']:.3f}<br>"
-        text += f"Therapeutic Score: {row['therapeutic_score']:.3f}<br>"
         text += f"FDR: {row['fdr']:.2e}<br>"
         text += f"DepMap: {row['target_depmap_dependent_lines']}/1086<br>"
         
@@ -184,12 +177,11 @@ def create_therapeutic_score_scatter(
         x='deletion_frequency',
         y=opportunities_df['gi_score'].abs(),
         color=color_values,
-        size='therapeutic_score',
+        size='deletion_frequency',
         color_discrete_map=color_discrete_map,
         labels={
             'deletion_frequency': 'Deletion Frequency',
-            'y': 'Absolute GI Score',
-            'size': 'Therapeutic Score'
+            'y': 'Absolute GI Score'
         }
     )
     
@@ -239,13 +231,15 @@ def create_target_gene_ranking_bar(
     
     # Aggregate by target gene
     target_summary = opportunities_df.groupby('target_gene').agg({
-        'therapeutic_score': 'sum',
-        'deleted_gene': lambda x: ', '.join(sorted(set(x))[:3]) + ('...' if len(set(x)) > 3 else ''),
+        'deleted_gene': 'count',  # Number of distinct SL pairs
+        'deletion_frequency': 'mean',
         'target_is_common_essential': 'first',
         'target_depmap_dependent_lines': 'first'
     }).reset_index()
     
-    target_summary = target_summary.sort_values('therapeutic_score', ascending=False).head(top_n)
+    target_summary.columns = ['target_gene', 'opportunity_count', 'avg_deletion_freq', 
+                               'target_is_common_essential', 'target_depmap_dependent_lines']
+    target_summary = target_summary.sort_values('opportunity_count', ascending=False).head(top_n)
     
     # Color by essentiality
     colors = target_summary['target_is_common_essential'].map({
@@ -257,17 +251,17 @@ def create_target_gene_ranking_bar(
     hover_text = []
     for _, row in target_summary.iterrows():
         text = f"<b>{row['target_gene']}</b><br>"
-        text += f"Total Score: {row['therapeutic_score']:.3f}<br>"
+        text += f"Opportunities: {row['opportunity_count']}<br>"
+        text += f"Avg Deletion: {row['avg_deletion_freq']:.1%}<br>"
         text += f"Essential: {'Yes' if row['target_is_common_essential'] else 'No'}<br>"
-        text += f"DepMap: {row['target_depmap_dependent_lines']}/1086 lines<br>"
-        text += f"SL pairs with: {row['deleted_gene']}"
+        text += f"DepMap: {row['target_depmap_dependent_lines']}/1086 lines"
         hover_text.append(text)
     
     # Create figure
     fig = go.Figure(data=[
         go.Bar(
             x=target_summary['target_gene'],
-            y=target_summary['therapeutic_score'],
+            y=target_summary['opportunity_count'],
             marker_color=colors,
             hovertemplate='%{customdata}<extra></extra>',
             customdata=hover_text,
@@ -277,9 +271,9 @@ def create_target_gene_ranking_bar(
     
     # Layout
     fig.update_layout(
-        title=f'Top {top_n} Target Genes by Cumulative Therapeutic Score',
+        title=f'Top {top_n} Target Genes by Number of Opportunities',
         xaxis_title='Target Gene',
-        yaxis_title='Cumulative Therapeutic Score',
+        yaxis_title='Number of Synthetic Lethal Opportunities',
         showlegend=False,
         height=500,
         template='plotly_white'
@@ -316,8 +310,8 @@ def create_study_comparison_heatmap(
         return fig
     
     # Get top target genes overall
-    top_targets = (comparison_df.groupby('target_gene')['therapeutic_score']
-                   .sum()
+    top_targets = (comparison_df.groupby('target_gene')['deleted_gene']
+                   .count()
                    .sort_values(ascending=False)
                    .head(top_n_targets)
                    .index.tolist())
@@ -326,12 +320,12 @@ def create_study_comparison_heatmap(
     matrix_df = comparison_df[comparison_df['target_gene'].isin(top_targets)].pivot_table(
         index='target_gene',
         columns='study_name',
-        values='therapeutic_score',
-        aggfunc='sum',
+        values='deletion_frequency',
+        aggfunc='mean',
         fill_value=0
     )
     
-    # Sort by total score
+    # Sort by average deletion frequency
     matrix_df['total'] = matrix_df.sum(axis=1)
     matrix_df = matrix_df.sort_values('total', ascending=False).drop('total', axis=1)
     

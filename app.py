@@ -801,7 +801,7 @@ def update_target_discovery_viz(active_viz_tab, study_id, fdr_threshold, min_del
             return target_discovery.create_target_ranking_table(opportunities)
         
         elif active_viz_tab == 'tab-sl-scatter':
-            fig = target_discovery.create_therapeutic_score_scatter(opportunities)
+            fig = target_discovery.create_gi_score_scatter(opportunities)
             return dcc.Graph(figure=fig, config={'displayModeBar': True, 'toImageButtonOptions': {
                 'format': 'png',
                 'filename': f'therapeutic_opportunities_{study_id}',
