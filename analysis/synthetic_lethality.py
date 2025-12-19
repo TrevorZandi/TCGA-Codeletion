@@ -16,10 +16,16 @@ import os
 import pandas as pd
 import numpy as np
 from typing import Optional, Dict, List, Tuple
+from io import BytesIO
 
 # Module directory for relative paths
 MODULE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(os.path.dirname(MODULE_DIR), 'documentation')
+
+# S3 configuration
+USE_S3 = os.environ.get('USE_S3', 'false').lower() == 'true'
+S3_BUCKET = os.environ.get('S3_BUCKET', 'tcga-codeletion-data')
+S3_SL_KEY = 'synthetic_lethality/SyntheticLethalData_Harle_2025.csv'
 
 
 def load_synthetic_lethal_data(
@@ -29,6 +35,8 @@ def load_synthetic_lethal_data(
 ) -> pd.DataFrame:
     """
     Load and filter synthetic lethality data from Harle 2025 study.
+    
+    Loads from S3 if USE_S3=true, otherwise from local documentation/ folder.
     
     Args:
         fdr_threshold: Maximum FDR to include (default 0.05 = 5%)
@@ -49,10 +57,27 @@ def load_synthetic_lethal_data(
         - targetA/B__n_depmap_dependent_cell_lines: "N/1086" format
         - sgrna_group.x: Data source type
     """
-    csv_path = os.path.join(DATA_DIR, 'SyntheticLethalData_Harle_2025.csv')
-    
-    # Load data
-    df = pd.read_csv(csv_path)
+    # Load data from S3 or local
+    if USE_S3:
+        import boto3
+        s3 = boto3.client('s3')
+        try:
+            obj = s3.get_object(Bucket=S3_BUCKET, Key=S3_SL_KEY)
+            df = pd.read_csv(BytesIO(obj['Body'].read()))
+        except Exception as e:
+            raise FileNotFoundError(
+                f"Failed to load synthetic lethality data from S3: "
+                f"s3://{S3_BUCKET}/{S3_SL_KEY} - {str(e)}"
+            )
+    else:
+        csv_path = os.path.join(DATA_DIR, 'SyntheticLethalData_Harle_2025.csv')
+        if not os.path.exists(csv_path):
+            raise FileNotFoundError(
+                f"Synthetic lethality data not found at: {csv_path}\n"
+                f"Expected file: SyntheticLethalData_Harle_2025.csv\n"
+                f"Please ensure the data file exists in the documentation/ folder."
+            )
+        df = pd.read_csv(csv_path)
     
     # Apply filters
     filtered = df[df['fdr'] <= fdr_threshold].copy()
