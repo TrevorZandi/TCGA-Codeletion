@@ -44,6 +44,7 @@ def create_codeletion_layout():
                     dbc.Tab(label="Co-Deletion Heatmap", tab_id="tab-heatmap"),
                     dbc.Tab(label="Top Gene Pairs", tab_id="tab-gene-pairs"),
                     dbc.Tab(label="Distance vs Probability", tab_id="tab-distance-scatter"),
+                    dbc.Tab(label="Synthetic Lethality Targets", tab_id="tab-target-discovery"),
                 ], id="visualization-tabs", active_tab="tab-heatmap", className="mb-4")
             ])
         ]),
@@ -73,6 +74,16 @@ def create_codeletion_layout():
                                 html.A("https://www.cancer.gov/tcga",
                                        href="https://www.cancer.gov/tcga",
                                        target="_blank")
+                            ],
+                            className="text-center text-muted small"
+                        ),
+                        html.P(
+                            [
+                                "Synthetic lethality data: Harle et al. (2025). ",
+                                html.A("A compendium of synthetic lethal gene pairs defined by extensive combinatorial pan-cancer CRISPR screening",
+                                       href="https://doi.org/10.1186/s13059-025-03737-w",
+                                       target="_blank"),
+                                ". Genome Biology."
                             ],
                             className="text-center text-muted small"
                         ),

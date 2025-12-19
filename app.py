@@ -169,6 +169,9 @@ def display_tab_content(active_tab):
         return create_gene_pairs_tab()
     elif active_tab == 'tab-distance-scatter':
         return create_distance_scatter_tab()
+    elif active_tab == 'tab-target-discovery':
+        from layouts.target_discovery_tab import create_target_discovery_tab
+        return create_target_discovery_tab()
     else:
         return create_heatmap_tab()  # Default
 
@@ -698,6 +701,143 @@ def update_study_comparison(study_filter, chromosome_filter):
 def update_summary_table(study_filter, chromosome_filter):
     """Update summary table."""
     return html.P("Summary table", className="text-muted")
+
+
+# ============================================================================
+# Synthetic Lethality Target Discovery Callbacks
+# ============================================================================
+
+# Callback: Populate target discovery study dropdown
+@app.callback(
+    Output('target-study-dropdown', 'options'),
+    Input('target-study-dropdown', 'id')
+)
+def populate_target_study_dropdown(_):
+    """Populate study dropdown for target discovery tab."""
+    studies = processed_loader.list_available_studies()
+    return get_study_options_with_names(studies)
+
+
+# Callback: Update target discovery visualizations
+@app.callback(
+    Output('target-viz-content', 'children'),
+    [Input('target-viz-tabs', 'active_tab'),
+     Input('target-study-dropdown', 'value'),
+     Input('fdr-threshold-slider', 'value'),
+     Input('min-del-freq-slider', 'value'),
+     Input('essentiality-filter', 'value')]
+)
+def update_target_discovery_viz(active_viz_tab, study_id, fdr_threshold, min_del_freq, ess_filter):
+    """Update target discovery visualizations based on user selections."""
+    from analysis import synthetic_lethality
+    from visualization import target_discovery
+    
+    if study_id is None:
+        return html.Div([
+            html.P("Please select a study to view therapeutic opportunities.", 
+                   className="text-center text-muted mt-5")
+        ])
+    
+    try:
+        # Load synthetic lethality data
+        sl_data = synthetic_lethality.load_synthetic_lethal_data(fdr_threshold=fdr_threshold)
+        
+        if sl_data.empty:
+            return html.Div([
+                html.P("No synthetic lethal pairs found with current FDR threshold.", 
+                       className="text-center text-muted mt-5")
+            ])
+        
+        hit_freq_df = synthetic_lethality.calculate_hit_frequency(sl_data)
+        
+        # Load genome-wide deletions for selected study
+        deletions = synthetic_lethality.aggregate_deletions_genome_wide(study_id)
+        
+        if deletions.empty:
+            return html.Div([
+                dbc.Alert([
+                    html.H5("No Deletion Data Available", className="alert-heading"),
+                    html.P(f"No processed deletion data found for study: {study_id}"),
+                    html.Hr(),
+                    html.P("Please ensure the study has been processed with batch_process.py", 
+                           className="mb-0 small")
+                ], color="warning")
+            ])
+        
+        # Join with SL data
+        opportunities = synthetic_lethality.join_deletion_with_synthetic_lethality(
+            deletion_df=deletions,
+            sl_data=sl_data,
+            hit_frequency_df=hit_freq_df,
+            min_deletion_freq=min_del_freq
+        )
+        
+        # Apply essentiality filter
+        if ess_filter == 'essential':
+            opportunities = opportunities[opportunities['target_is_common_essential'] == True]
+        elif ess_filter == 'non-essential':
+            opportunities = opportunities[opportunities['target_is_common_essential'] == False]
+        
+        # Check if we have data
+        if opportunities.empty:
+            return html.Div([
+                dbc.Alert([
+                    html.H5("No Opportunities Found", className="alert-heading"),
+                    html.P("No therapeutic opportunities found with current filters."),
+                    html.Hr(),
+                    html.P([
+                        "Try adjusting: ",
+                        html.Ul([
+                            html.Li("Lower the minimum deletion frequency"),
+                            html.Li("Increase the FDR threshold"),
+                            html.Li("Change the essentiality filter to 'All Targets'")
+                        ])
+                    ], className="mb-0 small")
+                ], color="info")
+            ])
+        
+        # Render appropriate visualization
+        if active_viz_tab == 'tab-sl-opportunities':
+            return target_discovery.create_target_ranking_table(opportunities)
+        
+        elif active_viz_tab == 'tab-sl-scatter':
+            fig = target_discovery.create_therapeutic_score_scatter(opportunities)
+            return dcc.Graph(figure=fig, config={'displayModeBar': True, 'toImageButtonOptions': {
+                'format': 'png',
+                'filename': f'therapeutic_opportunities_{study_id}',
+                'height': 800,
+                'width': 1200,
+                'scale': 2
+            }})
+        
+        elif active_viz_tab == 'tab-sl-targets':
+            fig = target_discovery.create_target_gene_ranking_bar(opportunities)
+            return dcc.Graph(figure=fig, config={'displayModeBar': True, 'toImageButtonOptions': {
+                'format': 'png',
+                'filename': f'top_targets_{study_id}',
+                'height': 600,
+                'width': 1000,
+                'scale': 2
+            }})
+        
+        else:
+            return html.Div("Unknown visualization type")
+    
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        return html.Div([
+            dbc.Alert([
+                html.H5("Error Loading Data", className="alert-heading"),
+                html.P(f"Failed to load target discovery data: {str(e)}"),
+                html.Hr(),
+                html.Details([
+                    html.Summary("Error Details", className="text-muted small"),
+                    html.Pre(error_details, className="small text-muted", 
+                            style={'maxHeight': '200px', 'overflow': 'auto'})
+                ])
+            ], color="danger")
+        ])
 
 
 # Run the app
