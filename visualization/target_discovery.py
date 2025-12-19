@@ -153,40 +153,73 @@ def create_gi_score_scatter(
     
     # Determine color scheme
     if color_by == 'target_is_common_essential':
-        color_values = opportunities_df['target_is_common_essential'].map({
-            True: 'Core Essential', 
-            False: 'Context-Specific'
-        })
-        color_discrete_map = {
-            'Core Essential': '#28a745', 
-            'Context-Specific': '#6c757d'
-        }
+        color_map = {True: '#28a745', False: '#6c757d'}
+        colors = opportunities_df['target_is_common_essential'].map(color_map)
         legend_title = 'Target Essentiality'
+        
+        # Create figure with separate traces for legend
+        fig = go.Figure()
+        
+        for is_essential, color, label in [(True, '#28a745', 'Core Essential'), 
+                                            (False, '#6c757d', 'Context-Specific')]:
+            mask = opportunities_df['target_is_common_essential'] == is_essential
+            if mask.any():
+                subset = opportunities_df[mask]
+                subset_hover = [hover_text[i] for i, m in enumerate(mask) if m]
+                
+                fig.add_trace(go.Scatter(
+                    x=subset['deletion_frequency'],
+                    y=subset['gi_score'],
+                    mode='markers',
+                    name=label,
+                    marker=dict(
+                        color=color,
+                        size=subset['deletion_frequency'] * 50,  # Scale for visibility
+                        sizemin=4,
+                        opacity=0.7,
+                        line=dict(width=0.5, color='white')
+                    ),
+                    customdata=subset_hover,
+                    hovertemplate='%{customdata}<extra></extra>'
+                ))
     elif color_by == 'hit_fraction' and 'hit_fraction' in opportunities_df.columns:
-        color_values = opportunities_df['hit_fraction']
-        color_discrete_map = None
-        legend_title = 'Validation Frequency'
-    else:
-        color_values = 'blue'
-        color_discrete_map = None
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=opportunities_df['deletion_frequency'],
+            y=opportunities_df['gi_score'],
+            mode='markers',
+            marker=dict(
+                color=opportunities_df['hit_fraction'],
+                colorscale='Viridis',
+                size=opportunities_df['deletion_frequency'] * 50,
+                sizemin=4,
+                opacity=0.7,
+                colorbar=dict(title='Validation<br>Frequency'),
+                line=dict(width=0.5, color='white')
+            ),
+            customdata=hover_text,
+            hovertemplate='%{customdata}<extra></extra>',
+            showlegend=False
+        ))
         legend_title = None
-    
-    # Create figure
-    fig = px.scatter(
-        opportunities_df,
-        x='deletion_frequency',
-        y='gi_score',
-        color=color_values,
-        size='deletion_frequency',
-        color_discrete_map=color_discrete_map,
-        labels={
-            'deletion_frequency': 'Deletion Frequency',
-            'gi_score': 'GI Score'
-        }
-    )
-    
-    # Update hover
-    fig.update_traces(hovertemplate='%{customdata}<extra></extra>', customdata=hover_text)
+    else:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=opportunities_df['deletion_frequency'],
+            y=opportunities_df['gi_score'],
+            mode='markers',
+            marker=dict(
+                color='blue',
+                size=opportunities_df['deletion_frequency'] * 50,
+                sizemin=4,
+                opacity=0.7,
+                line=dict(width=0.5, color='white')
+            ),
+            customdata=hover_text,
+            hovertemplate='%{customdata}<extra></extra>',
+            showlegend=False
+        ))
+        legend_title = None
     
     # Layout
     fig.update_layout(
