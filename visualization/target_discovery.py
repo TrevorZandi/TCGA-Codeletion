@@ -233,13 +233,14 @@ def create_target_gene_ranking_bar(
     target_summary = opportunities_df.groupby('target_gene').agg({
         'deleted_gene': 'count',  # Number of distinct SL pairs
         'deletion_frequency': 'mean',
+        'gi_score': lambda x: (x.abs()).mean(),  # Average absolute GI score
         'target_is_common_essential': 'first',
         'target_depmap_dependent_lines': 'first'
     }).reset_index()
     
-    target_summary.columns = ['target_gene', 'opportunity_count', 'avg_deletion_freq', 
+    target_summary.columns = ['target_gene', 'opportunity_count', 'avg_deletion_freq', 'avg_gi_score',
                                'target_is_common_essential', 'target_depmap_dependent_lines']
-    target_summary = target_summary.sort_values('opportunity_count', ascending=False).head(top_n)
+    target_summary = target_summary.sort_values('avg_gi_score', ascending=False).head(top_n)
     
     # Color by essentiality
     colors = target_summary['target_is_common_essential'].map({
@@ -251,6 +252,7 @@ def create_target_gene_ranking_bar(
     hover_text = []
     for _, row in target_summary.iterrows():
         text = f"<b>{row['target_gene']}</b><br>"
+        text += f"Avg |GI Score|: {row['avg_gi_score']:.3f}<br>"
         text += f"Opportunities: {row['opportunity_count']}<br>"
         text += f"Avg Deletion: {row['avg_deletion_freq']:.1%}<br>"
         text += f"Essential: {'Yes' if row['target_is_common_essential'] else 'No'}<br>"
@@ -261,7 +263,7 @@ def create_target_gene_ranking_bar(
     fig = go.Figure(data=[
         go.Bar(
             x=target_summary['target_gene'],
-            y=target_summary['opportunity_count'],
+            y=target_summary['avg_gi_score'],
             marker_color=colors,
             hovertemplate='%{customdata}<extra></extra>',
             customdata=hover_text,
@@ -271,9 +273,9 @@ def create_target_gene_ranking_bar(
     
     # Layout
     fig.update_layout(
-        title=f'Top {top_n} Target Genes by Number of Opportunities',
+        title=f'Top {top_n} Target Genes by Average Absolute GI Score',
         xaxis_title='Target Gene',
-        yaxis_title='Number of Synthetic Lethal Opportunities',
+        yaxis_title='Average Absolute GI Score',
         showlegend=False,
         height=500,
         template='plotly_white'
