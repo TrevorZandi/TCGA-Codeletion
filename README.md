@@ -1,6 +1,6 @@
 # TCGA Co-Deletion Analysis Application
 
-Multi-page Dash application for analyzing gene co-deletion patterns across TCGA PanCancer Atlas studies.
+Multi-page Dash application for analyzing gene co-deletion patterns and identifying synthetic lethality therapeutic opportunities across TCGA PanCancer Atlas studies.
 
 ## Architecture Overview
 
@@ -19,13 +19,18 @@ TCGA-Codeletion/
 │   ├── cached/                      # API response cache
 │   └── processed/                   # Analysis outputs (Excel/CSV)
 ├── analysis/
-│   └── codeletion_calc.py           # Statistical calculations
+│   ├── codeletion_calc.py           # Statistical calculations
+│   └── synthetic_lethality.py       # SL data integration and analysis
 ├── visualization/
-│   └── codeletion_heatmap.py        # Plotly figure constructors
-└── layouts/
-    ├── home.py                      # Homepage layout
-    ├── codeletion.py                # Co-deletion explorer page
-    └── summary.py                   # Summary statistics page
+│   ├── codeletion_heatmap.py        # Plotly figure constructors
+│   └── target_discovery.py          # SL visualization constructors
+├── layouts/
+│   ├── home.py                      # Homepage layout
+│   ├── codeletion.py                # Co-deletion explorer page
+│   ├── summary.py                   # Summary statistics page
+│   └── target_discovery_tab.py      # Synthetic lethality tab
+└── documentation/
+    └── SyntheticLethalData_Harle_2025.csv  # Harle et al. 2025 dataset
 ```
 
 ## Workflow
@@ -121,13 +126,56 @@ python main.py X prad_tcga_pan_can_atlas_2018   # ChrX, PRAD
 **Co-Deletion Explorer Features:**
 - **Study selector** - Choose from all processed TCGA studies (32 studies)
 - **Chromosome selector** - Choose from chromosomes 1-22, X, or Y
-- **Individual gene deletion frequency scatter plot** - Shows how often each gene is deleted (hover for gene name)
-- Interactive heatmap with zoom/pan
-- Configurable colorscale (Viridis, YlOrRd, Blues, etc.)
-- Adjustable axis labels (5-50 labels)
-- Top co-deleted gene pairs bar plot
+- **Multiple analysis tabs:**
+  - **Co-Deletion Analysis** - Interactive heatmap with zoom/pan, configurable colorscale, adjustable axis labels
+  - **Deletion Frequencies** - Scatter plot showing individual gene deletion frequencies
+  - **Top Pairs** - Bar chart of most frequently co-deleted gene pairs
+  - **Synthetic Lethality Targets** - Therapeutic opportunity discovery (see below)
 - Dataset statistics display (dynamically updates per chromosome)
 - Export high-resolution images
+
+**Synthetic Lethality Targets Tab:** 🆕
+Identifies therapeutic opportunities by integrating TCGA deletion data with experimentally validated synthetic lethal gene pairs from Harle et al. 2025.
+
+**Key Features:**
+- **Therapeutic Opportunity Table** - Sortable/filterable list of deletion-SL target pairs
+  - Deleted gene (lost in cancer)
+  - Target gene (synthetic lethal partner to inhibit)
+  - Deletion frequency in selected study
+  - GI score (genetic interaction strength, more negative = stronger SL)
+  - FDR (statistical significance)
+  - Target essentiality (BAGEL2 common essential flag)
+  - DepMap dependency (number of cell lines dependent on target)
+  - Validation breadth (tested in 27 cell lines across 3 cancer types)
+
+- **GI Score Scatter Plot** - Deletion frequency vs synthetic lethality strength
+  - X-axis: How often the gene is deleted in the study
+  - Y-axis: GI score (strength of synthetic lethality)
+  - Color-coded by target essentiality (green = core essential/safer targets)
+  - Bubble size proportional to deletion frequency
+  - Hover for detailed information including validation across cancer types
+
+- **Top Targets Bar Chart** - Genes with strongest average synthetic lethal interactions
+  - Ranked by average absolute GI score
+  - Shows number of distinct SL opportunities per target
+  - Color-coded by essentiality status
+
+**Interactive Filters:**
+- FDR threshold (0.001 - 0.1, default 0.05)
+- Minimum deletion frequency (1% - 50%, default 5%)
+- Essentiality filter (All / Essential only / Non-essential only)
+
+**Data Source:** 
+Harle A, et al. (2025). "A compendium of synthetic lethal gene pairs defined by extensive combinatorial pan-cancer CRISPR screening." *Genome Biology*. DOI: [10.1186/s13059-025-03737-w](https://doi.org/10.1186/s13059-025-03737-w)
+- 472 gene pairs tested across 27 cell lines (8 melanoma, 10 NSCLC, 9 pancreatic)
+- Quantitative GI scores with FDR significance
+- Essentiality annotations from BAGEL2 and DepMap
+
+**Use Case:** For a given TCGA study, identify which synthetic lethal targets are most relevant based on:
+1. Deletion frequency in patient samples (clinical relevance)
+2. Strength of synthetic lethality (biological effect size)
+3. Target safety profile (essentiality status)
+4. Validation robustness (consistency across cell lines and cancer types)
 
 **Summary Statistics Features:**
 - **Deletion Frequency Distribution** - Genome-wide view of deletion patterns by cytoband
@@ -176,12 +224,36 @@ Then open: http://127.0.0.1:8050
 - Conditional probabilities P(i|j)
 - Top co-deleted pairs extraction
 
+**`synthetic_lethality.py`** - Synthetic lethality integration 🆕
+- `load_synthetic_lethal_data()` - Load and filter Harle 2025 dataset from S3/local
+- `calculate_hit_frequency()` - Aggregate validation across 27 cell lines
+- `aggregate_deletions_genome_wide()` - Load deletion data across all 24 chromosomes
+- `join_deletion_with_synthetic_lethality()` - Create bidirectional therapeutic opportunities
+  - For each SL pair (A, B): if A deleted → target B, if B deleted → target A
+  - Filters by minimum deletion frequency threshold
+  - Annotates with essentiality and validation data
+- `compare_across_studies()` - Multi-study comparison of opportunities
+
 ### Visualization Layer (`visualization/`)
 
 **`codeletion_heatmap.py`** - Plotly figure constructors
 - `create_heatmap_figure()` - Dash-compatible (no file I/O)
 - `plot_heatmap()` - Standalone with HTML export
 - `create_top_pairs_figure()` - Bar plot constructor
+
+**`target_discovery.py`** - Synthetic lethality visualizations 🆕
+- `create_target_ranking_table()` - Interactive DataTable with sort/filter
+  - Displays deletion-target pairs with all metadata
+  - Numeric formatting for percentages and scientific notation
+  - Essentiality highlighting
+- `create_gi_score_scatter()` - Deletion frequency vs GI score scatter plot
+  - Color-coded by target essentiality
+  - Custom hover text with full opportunity details
+  - Direct `go.Scatter` implementation for accurate positioning
+- `create_target_gene_ranking_bar()` - Top targets by average GI score
+  - Aggregates opportunities per target gene
+  - Shows average strength of synthetic lethality
+- `create_study_comparison_heatmap()` - Cross-study comparison matrix (future enhancement)
 
 ### Layout Layer (`layouts/`)
 
@@ -195,7 +267,14 @@ Then open: http://127.0.0.1:8050
 - Interactive heatmap visualization
 - Deletion frequency scatter plot
 - Top co-deleted pairs bar chart
+- Synthetic lethality targets tab 🆕
 - Dataset statistics display
+
+**`target_discovery_tab.py`** - Synthetic lethality tab layout 🆕
+- Filter controls (FDR threshold, min deletion freq, essentiality)
+- Three visualization sub-tabs (table, scatter, bar chart)
+- Information alert explaining synthetic lethality concept
+- Harle et al. 2025 citation with DOI link
 
 **`summary.py`** - Summary statistics layout
 - Multi-study/chromosome filters
@@ -214,6 +293,16 @@ Then open: http://127.0.0.1:8050
 1. `populate_study_dropdown()` - Loads available studies
 2. `update_visualizations()` - Updates all three charts (heatmap, scatter, bar)
 3. `update_stats()` - Displays dataset statistics per chromosome
+
+**Synthetic Lethality Callbacks:** 🆕
+1. `populate_target_study_dropdown()` - Loads available studies for SL analysis
+2. `update_target_discovery_viz()` - Main callback for SL tab
+   - Loads Harle 2025 dataset with FDR filtering
+   - Aggregates genome-wide deletions (all 24 chromosomes)
+   - Joins to create therapeutic opportunities
+   - Applies essentiality and deletion frequency filters
+   - Routes to appropriate visualization (table/scatter/bar)
+   - Handles empty results with informative messages
 
 **Summary Page Callbacks:**
 1. `populate_summary_study_dropdown()` - Loads study filter options
@@ -301,13 +390,32 @@ python app.py
 ✅ **Multi-chromosome support** - Analyze all chromosomes (1-22, X, Y)  
 ✅ **Multi-study comparison** - 32 TCGA PanCancer Atlas studies  
 ✅ **Interactive visualizations** - Dash-powered heatmaps and scatter plots  
+✅ **Synthetic lethality integration** 🆕 - Identify therapeutic opportunities from deletion data  
 ✅ **Genome-wide deletion visualization** - See deletion patterns across all genes and cytobands  
 ✅ **Batch processing** - Automated analysis pipeline for 768 analyses  
 ✅ **Cytoband-ordered displays** - Genes sorted by chromosomal position  
 ✅ **Smart caching** - Gene-specific cache keys for accurate data retrieval  
 ✅ **Large dataset handling** - CSV format for chromosomes with >1000 genes  
+✅ **S3 data integration** - Load processed data and SL dataset from AWS S3  
 
 ## Recent Updates
+
+### Synthetic Lethality Target Discovery (v3.0) 🆕
+**December 2025**
+- Integrated Harle et al. 2025 synthetic lethality dataset (472 gene pairs, 27 cell lines)
+- New "Synthetic Lethality Targets" tab in Co-Deletion Explorer
+- Genome-wide deletion aggregation across all 24 chromosomes
+- Bidirectional opportunity creation (A deleted → target B, B deleted → target A)
+- Interactive filtering by FDR, deletion frequency, and target essentiality
+- Three visualization modes:
+  - Sortable/filterable opportunity table
+  - Deletion frequency vs GI score scatter plot
+  - Top targets ranked by average GI score
+- S3 integration for SL dataset (proper data/code separation)
+- Essentiality annotations from BAGEL2 and DepMap (1086 cell lines)
+- Validation metadata across 3 cancer types (melanoma, NSCLC, pancreatic)
+
+**Key insight:** Enables translational research by connecting TCGA genomic deletions with experimentally validated drug target opportunities.
 
 ### Genome-Wide Deletion Frequency Visualization (v2.1)
 - Implemented deletion frequency distribution by cytoband in Summary Statistics page
@@ -372,13 +480,37 @@ eb open
 
 ## Future Enhancements
 
-- Complete remaining summary statistics visualizations:
-  - Chromosome comparison bar chart
-  - Study comparison chart
-  - Detailed statistics data table
+### Co-Deletion Analysis
 - Gene search/filter functionality in co-deletion explorer
 - Download filtered datasets from UI
 - Custom deletion threshold selection
 - Network visualization of co-deletion clusters
 - Multi-study overlay comparisons in co-deletion heatmaps
 - Statistical significance testing for co-deletions
+
+### Synthetic Lethality
+- Custom therapeutic scoring system (user-defined weights for deletion freq, GI score, essentiality)
+- Multi-study comparison heatmap for cross-cancer analysis
+- Integration with drug databases (DrugBank, ChEMBL) for existing inhibitors
+- Expression data integration (TCGA RNA-Seq) for target validation
+- Patient stratification: which patients would benefit most from each target
+- Network analysis: identify master regulators in SL networks
+- Clinical trial matching based on deletion profiles
+
+### Summary Statistics
+- Complete remaining summary statistics visualizations:
+  - Chromosome comparison bar chart
+  - Study comparison chart
+  - Detailed statistics data table
+- Genome-wide synthetic lethality opportunity heatmap
+
+## Citations
+
+**TCGA Data:**
+The Cancer Genome Atlas Research Network. (2013-2018). TCGA Pan-Cancer Atlas. [https://www.cell.com/pb-assets/consortium/pancanceratlas/pancani3/index.html](https://www.cell.com/pb-assets/consortium/pancanceratlas/pancani3/index.html)
+
+**Synthetic Lethality Data:**
+Harle A, Alpsoy A, Rauscher B, et al. (2025). A compendium of synthetic lethal gene pairs defined by extensive combinatorial pan-cancer CRISPR screening. *Genome Biology*, 26, Article 14. DOI: [10.1186/s13059-025-03737-w](https://doi.org/10.1186/s13059-025-03737-w)
+
+**cBioPortal API:**
+Cerami E, Gao J, Dogrusoz U, et al. (2012). The cBio Cancer Genomics Portal: An Open Platform for Exploring Multidimensional Cancer Genomics Data. *Cancer Discovery*, 2(5), 401-404.
