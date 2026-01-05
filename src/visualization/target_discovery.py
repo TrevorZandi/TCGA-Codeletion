@@ -47,7 +47,7 @@ def create_target_ranking_table(
          'format': {'specifier': '.3f'}},
         {'name': 'Essential', 'id': 'target_is_common_essential', 'type': 'text',
          'presentation': 'markdown'},
-        {'name': 'DepMap Lines', 'id': 'target_depmap_dependent_lines', 'type': 'numeric'},
+        {'name': 'Dependent lines (DepMap)', 'id': 'target_depmap_dependent_lines', 'type': 'numeric'},
         {'name': 'FDR', 'id': 'fdr', 'type': 'numeric', 
          'format': {'specifier': '.2e'}},
     ]
