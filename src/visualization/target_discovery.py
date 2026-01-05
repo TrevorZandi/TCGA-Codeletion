@@ -37,9 +37,22 @@ def create_target_ranking_table(
     # Prepare display data
     display_df = opportunities_df.head(max_rows).copy()
     
+    # Debug logging
+    import sys
+    print(f"[DEBUG] Opportunities columns: {opportunities_df.columns.tolist()}", file=sys.stderr)
+    print(f"[DEBUG] 'deleted_gene_cytoband' in columns: {'deleted_gene_cytoband' in opportunities_df.columns}", file=sys.stderr)
+    if 'deleted_gene_cytoband' in opportunities_df.columns:
+        print(f"[DEBUG] Cytoband values: {opportunities_df['deleted_gene_cytoband'].head()}", file=sys.stderr)
+
+    # Ensure cytoband column exists for display
+    if 'deleted_gene_cytoband' not in display_df.columns:
+        display_df['deleted_gene_cytoband'] = ''
+    display_df['deleted_gene_cytoband'] = display_df['deleted_gene_cytoband'].fillna('')
+    
     # Format columns
     columns_config = [
         {'name': 'Deleted Gene', 'id': 'deleted_gene', 'type': 'text'},
+        {'name': 'Deleted gene cytoband', 'id': 'deleted_gene_cytoband', 'type': 'text'},
         {'name': 'Target Gene', 'id': 'target_gene', 'type': 'text'},
         {'name': 'Deletion %', 'id': 'deletion_frequency', 'type': 'numeric', 
          'format': {'specifier': '.1%'}},

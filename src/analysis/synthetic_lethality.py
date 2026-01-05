@@ -212,6 +212,7 @@ def aggregate_deletions_genome_wide(
         - gene: Gene symbol (e.g., "TP53")
         - entrez_id: Entrez gene ID
         - chromosome: Chromosome location
+        - cytoband: Cytogenetic band for the gene (if available)
         - deletion_frequency: Fraction of samples with deletion (0-1)
     """
     from data import processed_loader
@@ -225,6 +226,25 @@ def aggregate_deletions_genome_wide(
         try:
             # Load deletion frequencies for this chromosome
             del_freq_series = processed_loader.load_deletion_frequencies(chr_num, study_id)
+
+            # Load gene metadata for cytoband lookup (accept varying column casing)
+            try:
+                gene_metadata = processed_loader.load_gene_metadata(chr_num, study_id)
+                cols_lower = {c.lower(): c for c in gene_metadata.columns}
+                entrez_col = cols_lower.get('entrezgeneid') or cols_lower.get('entrez_gene_id')
+                symbol_col = cols_lower.get('hugogenesymbol') or cols_lower.get('gene_symbol')
+                cytoband_col = cols_lower.get('cytoband') or cols_lower.get('maplocation')
+
+                cytoband_by_entrez = {}
+                cytoband_by_symbol = {}
+                if cytoband_col:
+                    if entrez_col:
+                        cytoband_by_entrez = gene_metadata.set_index(entrez_col)[cytoband_col].to_dict()
+                    if symbol_col:
+                        cytoband_by_symbol = gene_metadata.set_index(symbol_col)[cytoband_col].to_dict()
+            except FileNotFoundError:
+                cytoband_by_entrez = {}
+                cytoband_by_symbol = {}
             
             # Convert Series to DataFrame format
             for gene_name, freq in del_freq_series.items():
@@ -239,11 +259,18 @@ def aggregate_deletions_genome_wide(
                 else:
                     symbol = gene_name
                     entrez_id = None
+
+                cytoband = None
+                if entrez_id is not None and cytoband_by_entrez:
+                    cytoband = cytoband_by_entrez.get(entrez_id)
+                if not cytoband and cytoband_by_symbol:
+                    cytoband = cytoband_by_symbol.get(symbol)
                 
                 all_deletions.append({
                     'gene': symbol,
                     'entrez_id': entrez_id,
                     'chromosome': chr_num,
+                    'cytoband': cytoband,
                     'deletion_frequency': freq
                 })
         
@@ -322,7 +349,8 @@ def join_deletion_with_synthetic_lethality(
         # Opportunity 1: A is deleted → target B
         a_deletions = deletion_df[deletion_df['gene'] == gene_a]
         if not a_deletions.empty:
-            del_freq_a = a_deletions.iloc[0]['deletion_frequency']
+            a_row = a_deletions.iloc[0]
+            del_freq_a = a_row['deletion_frequency']
             
             opp = {
                 'deleted_gene': gene_a,
@@ -331,7 +359,8 @@ def join_deletion_with_synthetic_lethality(
                 'gi_score': sl_row['mean_norm_gi'],
                 'fdr': sl_row['fdr'],
                 'target_is_common_essential': bool(sl_row['targetB__is_common_essential_bagel2']),
-                'target_depmap_dependent_lines': sl_row['targetB_depmap_count']
+                'target_depmap_dependent_lines': sl_row['targetB_depmap_count'],
+                'deleted_gene_cytoband': a_row.get('cytoband')
             }
             
             if hit_frequency_df is not None:
@@ -344,7 +373,8 @@ def join_deletion_with_synthetic_lethality(
         # Opportunity 2: B is deleted → target A
         b_deletions = deletion_df[deletion_df['gene'] == gene_b]
         if not b_deletions.empty:
-            del_freq_b = b_deletions.iloc[0]['deletion_frequency']
+            b_row = b_deletions.iloc[0]
+            del_freq_b = b_row['deletion_frequency']
             
             opp = {
                 'deleted_gene': gene_b,
@@ -353,7 +383,8 @@ def join_deletion_with_synthetic_lethality(
                 'gi_score': sl_row['mean_norm_gi'],
                 'fdr': sl_row['fdr'],
                 'target_is_common_essential': bool(sl_row['targetA__is_common_essential_bagel2']),
-                'target_depmap_dependent_lines': sl_row['targetA_depmap_count']
+                'target_depmap_dependent_lines': sl_row['targetA_depmap_count'],
+                'deleted_gene_cytoband': b_row.get('cytoband')
             }
             
             if hit_frequency_df is not None:
@@ -364,6 +395,13 @@ def join_deletion_with_synthetic_lethality(
             opportunities.append(opp)
     
     result_df = pd.DataFrame(opportunities)
+    
+    # Debug logging
+    import sys
+    print(f"[DEBUG] Result DF columns: {result_df.columns.tolist()}", file=sys.stderr)
+    print(f"[DEBUG] Result DF shape: {result_df.shape}", file=sys.stderr)
+    if 'deleted_gene_cytoband' in result_df.columns:
+        print(f"[DEBUG] Cytoband non-null count: {result_df['deleted_gene_cytoband'].notna().sum()}", file=sys.stderr)
     
     # Sort by deletion frequency (descending), then by absolute GI score (descending)
     if not result_df.empty:
