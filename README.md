@@ -8,34 +8,48 @@ This project follows a clean separation between ETL pipeline and visualization:
 
 ```
 TCGA-Codeletion/
-├── main.py                          # ETL pipeline (single study/chromosome)
-├── batch_process.py                 # ETL pipeline (all studies/chromosomes)
-├── app.py                           # Multi-page Dash application
+├── src/                             # Main application code
+│   ├── app.py                       # Multi-page Dash application
+│   ├── application.py               # AWS WSGI entry point
+│   ├── main.py                      # ETL pipeline (single study/chromosome)
+│   ├── batch_process.py             # ETL pipeline (all studies/chromosomes)
+│   ├── data/
+│   │   ├── cbioportal_client.py    # Low-level API wrapper
+│   │   ├── queries.py               # Domain-specific queries
+│   │   ├── cache_utils.py           # Caching utilities
+│   │   └── processed_loader.py      # Load pre-processed data for Dash
+│   ├── analysis/
+│   │   ├── codeletion_calc.py       # Statistical calculations
+│   │   └── synthetic_lethality.py   # SL data integration and analysis
+│   ├── visualization/
+│   │   ├── codeletion_heatmap.py    # Plotly figure constructors
+│   │   └── target_discovery.py      # SL visualization constructors
+│   └── layouts/
+│       ├── home.py                  # Homepage layout
+│       ├── codeletion.py            # Co-deletion explorer page
+│       ├── summary.py               # Summary statistics page
+│       └── target_discovery_tab.py  # Synthetic lethality tab
 ├── data/
-│   ├── cbioportal_client.py        # Low-level API wrapper
-│   ├── queries.py                   # Domain-specific queries
-│   ├── cache_utils.py               # Caching utilities
-│   ├── processed_loader.py          # Load pre-processed data for Dash
 │   ├── cached/                      # API response cache
-│   └── processed/                   # Analysis outputs (Excel/CSV)
-├── analysis/
-│   ├── codeletion_calc.py           # Statistical calculations
-│   └── synthetic_lethality.py       # SL data integration and analysis
-├── visualization/
-│   ├── codeletion_heatmap.py        # Plotly figure constructors
-│   └── target_discovery.py          # SL visualization constructors
-├── layouts/
-│   ├── home.py                      # Homepage layout
-│   ├── codeletion.py                # Co-deletion explorer page
-│   ├── summary.py                   # Summary statistics page
-│   └── target_discovery_tab.py      # Synthetic lethality tab
-└── documentation/
-    └── SyntheticLethalData_Harle_2025.csv  # Harle et al. 2025 dataset
+│   ├── processed/                   # Analysis outputs (Excel/CSV)
+│   └── curated_data/                # Study lists and reference data
+├── scripts/                         # Utility and deployment scripts
+│   ├── run_app.sh                   # Launch Dash application
+│   ├── run_batch.sh                 # Run batch processing
+│   ├── update_gene_metadata.py      # Update gene metadata
+│   └── upload_data_to_s3.sh         # Deploy data to AWS S3
+├── tests/                           # Test and debug scripts
+├── docs/                            # Documentation (see docs/README.md)
+│   ├── deployment/                  # AWS deployment guides
+│   ├── implementation/              # Feature implementation docs
+│   ├── api/                         # cBioPortal API documentation
+│   └── references/                  # Research papers and datasets
+└── application.py                   # Symlink to src/application.py (AWS EB)
 ```
 
 ## Workflow
 
-### 1. Batch Processing: `batch_process.py` (All TCGA Studies) - **RECOMMENDED**
+### 1. Batch Processing: `src/batch_process.py` (All TCGA Studies) - **RECOMMENDED**
 
 **Purpose:** Pre-compute co-deletions for **all chromosomes (1-22, X, Y)** across all 32 TCGA PanCancer Atlas studies
 
@@ -71,12 +85,12 @@ data/processed/
 
 **Run:**
 ```bash
-./run_batch.sh
+./scripts/run_batch.sh
 # Or directly:
-python batch_process.py
+python src/batch_process.py
 
 # Test mode (chr13 only, 2 studies):
-python batch_process.py --test
+python src/batch_process.py --test
 ```
 
 **Expected Time:** 
@@ -95,13 +109,13 @@ python batch_process.py --test
 
 **Usage:**
 ```bash
-python main.py [chromosome] [study_id]
+python src/main.py [chromosome] [study_id]
 
 # Examples:
-python main.py                    # Default: chr13, PRAD
-python main.py 17                 # Chr17, PRAD
-python main.py 13 brca_tcga_pan_can_atlas_2018  # Chr13, BRCA
-python main.py X prad_tcga_pan_can_atlas_2018   # ChrX, PRAD
+python src/main.py                    # Default: chr13, PRAD
+python src/main.py 17                 # Chr17, PRAD
+python src/main.py 13 brca_tcga_pan_can_atlas_2018  # Chr13, BRCA
+python src/main.py X prad_tcga_pan_can_atlas_2018   # ChrX, PRAD
 ```
 
 **Generated Files (per chromosome):**
@@ -192,11 +206,13 @@ Harle A, et al. (2025). "A compendium of synthetic lethal gene pairs defined by 
 
 **Run:**
 ```bash
-python app.py
+./scripts/run_app.sh
+# Or directly:
+python src/app.py
 ```
 Then open: http://127.0.0.1:8050
 
-**Note:** Run `batch_process.py` first to generate data for multiple studies
+**Note:** Run `src/batch_process.py` first to generate data for multiple studies
 ## Key Components
 
 ### Data Layer (`data/`)
@@ -217,7 +233,7 @@ Then open: http://127.0.0.1:8050
 - Filters and transforms data
 - Sorts genes by chromosomal position
 
-### Analysis Layer (`analysis/`)
+### Analysis Layer (`src/analysis/`)
 
 **`codeletion_calc.py`** - Statistical computations
 - Co-deletion frequency matrix
@@ -234,7 +250,7 @@ Then open: http://127.0.0.1:8050
   - Annotates with essentiality and validation data
 - `compare_across_studies()` - Multi-study comparison of opportunities
 
-### Visualization Layer (`visualization/`)
+### Visualization Layer (`src/visualization/`)
 
 **`codeletion_heatmap.py`** - Plotly figure constructors
 - `create_heatmap_figure()` - Dash-compatible (no file I/O)
@@ -255,7 +271,7 @@ Then open: http://127.0.0.1:8050
   - Shows average strength of synthetic lethality
 - `create_study_comparison_heatmap()` - Cross-study comparison matrix (future enhancement)
 
-### Layout Layer (`layouts/`)
+### Layout Layer (`src/layouts/`)
 
 **`home.py`** - Homepage layout
 - Hero section with application description
@@ -351,10 +367,10 @@ pip install -r requirements.txt
 
 ```bash
 # Run batch processing for all 32 studies × 24 chromosomes (~8-12 hours)
-./run_batch.sh
+./scripts/run_batch.sh
 
 # OR: Test mode (chr13 only, 2 studies, ~5-10 minutes)
-python batch_process.py --test
+python src/batch_process.py --test
 ```
 
 This will generate data for all TCGA PanCancer Atlas studies across all chromosomes (1-22, X, Y) and save results to `data/processed/{study_id}/chr{N}_*.xlsx`.
@@ -365,7 +381,7 @@ This will generate data for all TCGA PanCancer Atlas studies across all chromoso
 
 ```bash
 # Start Dash web application
-./run_app.sh
+./scripts/run_app.sh
 
 # Open browser and navigate to:
 # http://127.0.0.1:8050
@@ -378,10 +394,10 @@ This will generate data for all TCGA PanCancer Atlas studies across all chromoso
 source .venv/bin/activate
 
 # Process all studies
-python batch_process.py
+python src/batch_process.py
 
 # Start Dash app
-python app.py
+python src/app.py
 ```
 
 ## Features
@@ -441,7 +457,7 @@ python app.py
 
 ## AWS Deployment
 
-This application is ready for deployment to AWS Elastic Beanstalk. See **[AWS_DEPLOYMENT_GUIDE.md](AWS_DEPLOYMENT_GUIDE.md)** for complete instructions.
+This application is ready for deployment to AWS Elastic Beanstalk. See **[docs/deployment/AWS_DEPLOYMENT_GUIDE.md](docs/deployment/AWS_DEPLOYMENT_GUIDE.md)** for complete instructions.
 
 ### Quick Deployment Overview
 
@@ -462,7 +478,7 @@ Since processed data is ~6.1GB (too large for GitHub), use AWS S3:
 
 ```bash
 # 1. Upload data to S3
-./upload_data_to_s3.sh tcga-codeletion-data
+./scripts/upload_data_to_s3.sh tcga-codeletion-data
 
 # 2. Initialize Elastic Beanstalk
 eb init -p python-3.14 tcga-codeletion-app

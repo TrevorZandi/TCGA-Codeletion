@@ -44,9 +44,14 @@ Thumbs.db
 
 # Logs
 *.log
+output.txt
 
 # Test outputs
 test_*.html
+
+# Debug scripts (keep local only)
+tests/debug_*.py
+**/debug_*.py
 
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
