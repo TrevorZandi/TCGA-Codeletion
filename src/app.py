@@ -27,6 +27,20 @@ from src.visualization import codeletion_heatmap
 
 
 # ============================================================================
+# Health Check Endpoint (for ELB)
+# ============================================================================
+
+def register_health_check(server):
+    """
+    Register lightweight health check endpoint for AWS Elastic Load Balancer.
+    This endpoint requires no S3/file I/O and responds quickly.
+    """
+    @server.route('/health')
+    def health_check():
+        return {"status": "ok"}, 200
+
+
+# ============================================================================
 # Helper Functions
 # ============================================================================
 
@@ -838,6 +852,10 @@ def update_target_discovery_viz(active_viz_tab, study_id, fdr_threshold, min_del
                 ])
             ], color="danger")
         ])
+
+
+# Register health check endpoint
+register_health_check(app.server)
 
 
 # Run the app

@@ -23,11 +23,26 @@ S3_PREFIX = os.environ.get('S3_PREFIX', 'processed/')
 _s3_client = None
 
 def _get_s3_client():
-    """Get or create S3 client (lazy initialization)."""
+    """
+    Get or create S3 client with connection pooling and optimized retry logic.
+    Uses lazy initialization and reuses client across requests.
+    """
     global _s3_client
     if _s3_client is None:
         import boto3
-        _s3_client = boto3.client('s3')
+        from botocore.config import Config
+        
+        # Enable connection pooling and adaptive retries for better performance
+        config = Config(
+            max_pool_connections=10,  # Allow up to 10 concurrent connections
+            retries={
+                'max_attempts': 3,
+                'mode': 'adaptive'  # Automatic exponential backoff
+            },
+            connect_timeout=5,  # 5s to establish connection
+            read_timeout=30     # 30s to read response
+        )
+        _s3_client = boto3.client('s3', config=config)
     return _s3_client
 
 
