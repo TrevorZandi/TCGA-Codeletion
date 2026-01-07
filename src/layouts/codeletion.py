@@ -45,7 +45,7 @@ def create_codeletion_layout():
                     dbc.Tab(label="Top Gene Pairs", tab_id="tab-gene-pairs"),
                     dbc.Tab(label="Distance vs Probability", tab_id="tab-distance-scatter"),
                     dbc.Tab(label="Synthetic Lethality Targets", tab_id="tab-target-discovery"),
-                ], id="visualization-tabs", active_tab="tab-heatmap", className="mb-4")
+                ], id="visualization-tabs", active_tab="tab-deletion-freq", className="mb-4")
             ])
         ]),
         
