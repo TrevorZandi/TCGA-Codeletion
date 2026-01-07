@@ -118,7 +118,7 @@ def create_deletion_freq_tab():
                     dcc.Dropdown(
                         id='deletion-study-dropdown',
                         options=[],
-                        value='Breast Invasive Carcinoma',
+                        value=None,
                         clearable=False,
                         className="mb-3"
                     ),
@@ -192,7 +192,7 @@ def create_heatmap_tab():
                     dcc.Dropdown(
                         id='heatmap-study-dropdown',
                         options=[],
-                        value='Breast Invasive Carcinoma',
+                        value=None,
                         clearable=False,
                         className="mb-3"
                     ),
@@ -279,7 +279,7 @@ def create_gene_pairs_tab():
                     dcc.Dropdown(
                         id='pairs-study-dropdown',
                         options=[],
-                        value='Breast Invasive Carcinoma',
+                        value=None,
                         clearable=False,
                         className="mb-3"
                     ),
