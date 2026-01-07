@@ -209,11 +209,12 @@ def populate_deletion_study_dropdown(_):
     
     options = get_study_options_with_names(available_studies)
     
-    # Default to first alphabetically (by display name)
-    default_value = options[0]['value'] if options else available_studies[0]
-    
-    return options, default_value
-
+    # Default to Breast Invasive Carcinoma if available, otherwise first alphabetically
+    default_study_id = 'brca_tcga_pan_can_atlas_2018'
+    if any(opt['value'] == default_study_id for opt in options):
+        default_value = default_study_id
+    else:
+        default_value = options[0]['value'] if options else available_studies[0]
 
 # Callback: Update deletion frequency scatter plot
 @app.callback(
