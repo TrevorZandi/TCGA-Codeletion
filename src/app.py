@@ -215,6 +215,8 @@ def populate_deletion_study_dropdown(_):
         default_value = default_study_id
     else:
         default_value = options[0]['value'] if options else available_studies[0]
+    
+    return options, default_value
 
 # Callback: Update deletion frequency scatter plot
 @app.callback(
