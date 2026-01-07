@@ -118,7 +118,7 @@ def create_deletion_freq_tab():
                     dcc.Dropdown(
                         id='deletion-study-dropdown',
                         options=[],
-                        value=None,
+                        value='Breast Invasive Carcinoma',
                         clearable=False,
                         className="mb-3"
                     ),
@@ -130,7 +130,7 @@ def create_deletion_freq_tab():
                             {'label': 'Chromosome X', 'value': 'X'},
                             {'label': 'Chromosome Y', 'value': 'Y'}
                         ],
-                        value='13',
+                        value='16',
                         clearable=False,
                         className="mb-3"
                     ),
@@ -192,7 +192,7 @@ def create_heatmap_tab():
                     dcc.Dropdown(
                         id='heatmap-study-dropdown',
                         options=[],
-                        value=None,
+                        value='Breast Invasive Carcinoma',
                         clearable=False,
                         className="mb-3"
                     ),
@@ -204,7 +204,7 @@ def create_heatmap_tab():
                             {'label': 'Chromosome X', 'value': 'X'},
                             {'label': 'Chromosome Y', 'value': 'Y'}
                         ],
-                        value='13',
+                        value='16',
                         clearable=False,
                         className="mb-3"
                     ),
@@ -279,7 +279,7 @@ def create_gene_pairs_tab():
                     dcc.Dropdown(
                         id='pairs-study-dropdown',
                         options=[],
-                        value=None,
+                        value='Breast Invasive Carcinoma',
                         clearable=False,
                         className="mb-3"
                     ),
@@ -291,7 +291,7 @@ def create_gene_pairs_tab():
                             {'label': 'Chromosome X', 'value': 'X'},
                             {'label': 'Chromosome Y', 'value': 'Y'}
                         ],
-                        value='13',
+                        value='16',
                         clearable=False,
                         className="mb-3"
                     ),
@@ -408,7 +408,7 @@ def create_distance_scatter_tab():
                     dcc.Dropdown(
                         id='scatter-study-dropdown',
                         options=[],
-                        value=None,
+                        value='Breast Invasive Carcinoma',
                         clearable=False,
                         className="mb-3"
                     ),
@@ -420,7 +420,7 @@ def create_distance_scatter_tab():
                             {'label': 'Chromosome X', 'value': 'X'},
                             {'label': 'Chromosome Y', 'value': 'Y'}
                         ],
-                        value='13',
+                        value='16',
                         clearable=False,
                         className="mb-3"
                     ),
