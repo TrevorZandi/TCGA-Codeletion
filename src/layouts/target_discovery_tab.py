@@ -108,7 +108,6 @@ def create_target_discovery_tab():
             dbc.Tabs([
                 dbc.Tab(label="Top Opportunities", tab_id="tab-sl-opportunities"),
                 dbc.Tab(label="Therapeutic Score Plot", tab_id="tab-sl-scatter"),
-                dbc.Tab(label="Best Targets", tab_id="tab-sl-targets"),
             ], id="target-viz-tabs", active_tab="tab-sl-opportunities", className="mb-3"),
             
             # Loading wrapper

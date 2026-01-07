@@ -824,16 +824,6 @@ def update_target_discovery_viz(active_viz_tab, study_id, fdr_threshold, min_del
                 'scale': 2
             }})
         
-        elif active_viz_tab == 'tab-sl-targets':
-            fig = target_discovery.create_target_gene_ranking_bar(opportunities)
-            return dcc.Graph(figure=fig, config={'displayModeBar': True, 'toImageButtonOptions': {
-                'format': 'png',
-                'filename': f'top_targets_{study_id}',
-                'height': 600,
-                'width': 1000,
-                'scale': 2
-            }})
-        
         else:
             return html.Div("Unknown visualization type")
     
