@@ -308,7 +308,11 @@ def populate_heatmap_study_dropdown(_):
         return [{'label': 'No studies processed yet', 'value': 'none'}], 'none'
     
     options = get_study_options_with_names(available_studies)
-    default_value = options[0]['value'] if options else available_studies[0]
+    default_study_id = 'brca_tcga_pan_can_atlas_2018'
+    if any(opt['value'] == default_study_id for opt in options):
+        default_value = default_study_id
+    else:
+        default_value = options[0]['value'] if options else available_studies[0]
     
     return options, default_value
 
@@ -412,7 +416,11 @@ def populate_pairs_study_dropdown(_):
         return [{'label': 'No studies processed yet', 'value': 'none'}], 'none'
     
     options = get_study_options_with_names(available_studies)
-    default_value = options[0]['value'] if options else available_studies[0]
+    default_study_id = 'brca_tcga_pan_can_atlas_2018'
+    if any(opt['value'] == default_study_id for opt in options):
+        default_value = default_study_id
+    else:
+        default_value = options[0]['value'] if options else available_studies[0]
     
     return options, default_value
 
@@ -495,7 +503,11 @@ def populate_scatter_study_dropdown(_):
         return [{'label': 'No studies processed yet', 'value': 'none'}], 'none'
     
     options = get_study_options_with_names(available_studies)
-    default_value = options[0]['value'] if options else available_studies[0]
+    default_study_id = 'brca_tcga_pan_can_atlas_2018'
+    if any(opt['value'] == default_study_id for opt in options):
+        default_value = default_study_id
+    else:
+        default_value = options[0]['value'] if options else available_studies[0]
     
     return options, default_value
 
@@ -726,15 +738,28 @@ def update_summary_table(study_filter, chromosome_filter):
 
 # Callback: Populate target discovery study dropdown
 @app.callback(
-    Output('target-study-dropdown', 'options'),
+    [Output('target-study-dropdown', 'options'),
+     Output('target-study-dropdown', 'value')],
     Input('target-study-dropdown', 'id')
 )
 def populate_target_study_dropdown(_):
     """Populate study dropdown for target discovery tab."""
     studies = processed_loader.list_available_studies()
-    return get_study_options_with_names(studies)
-
-
+    
+    if not studies:
+        return [{'label': 'No studies available', 'value': 'none'}], None
+    
+    options = get_study_options_with_names(studies)
+    
+    # Default to Breast Invasive Carcinoma if available, otherwise first alphabetically
+    default_study_id = 'brca_tcga_pan_can_atlas_2018'
+    if any(opt['value'] == default_study_id for opt in options):
+        default_value = default_study_id
+    else:
+        default_value = options[0]['value'] if options else None
+    
+    return options, default_value
+    
 # Callback: Update target discovery visualizations
 @app.callback(
     Output('target-viz-content', 'children'),
